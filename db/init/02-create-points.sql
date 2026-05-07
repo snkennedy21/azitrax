@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS points (
+  id SERIAL PRIMARY KEY,
+  geom GEOMETRY(Point, 4326),
+  created_at TIMESTAMP DEFAULT NOW()
+);
