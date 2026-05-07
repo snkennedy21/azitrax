@@ -2,12 +2,18 @@
 
 FastAPI service for the minimal geospatial app.
 
-This directory will contain:
+## Local Development
 
-- FastAPI application entry point
-- Point API routes
-- Database connection code
-- SQL for reading and writing PostGIS points
-- Backend tests
+Start the backend without the frontend:
 
-No backend behavior is implemented yet.
+```sh
+docker compose up --build backend
+```
+
+The API will be available at `http://127.0.0.1:8000`.
+
+Check that it is running:
+
+```sh
+curl http://127.0.0.1:8000/health
+```

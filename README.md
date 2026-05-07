@@ -16,7 +16,21 @@ The Phase 0 goal is for a user to open a map, click to save a point, and see per
 
 ## Local Services
 
-The first local service is Postgres with PostGIS, defined in `compose.yaml`.
+Local services are defined in `compose.yaml`.
+
+Start the backend API without the frontend:
+
+```sh
+docker compose up --build backend
+```
+
+Check the backend health endpoint:
+
+```sh
+curl http://127.0.0.1:8000/health
+```
+
+Start Postgres with PostGIS:
 
 ```sh
 docker compose up -d db
@@ -27,7 +41,8 @@ Local defaults are documented in `.env.example`:
 - database: `vector`
 - user: `vector`
 - password: `vector`
-- port: `5432`
+- database port: `5432`
+- backend port: `8000`
 
 To override them, create a local `.env` file using the same variable names:
 
@@ -41,4 +56,4 @@ Verify the database accepts connections and PostGIS is enabled:
 docker compose exec db psql -U vector -d vector -c "SELECT PostGIS_Version();"
 ```
 
-The frontend and backend apps are intentionally not scaffolded yet. Their directories exist to establish the repository layout for upcoming tickets.
+The frontend app is intentionally not scaffolded yet. Its directory exists to establish the repository layout for upcoming tickets.
