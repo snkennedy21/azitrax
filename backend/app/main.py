@@ -56,6 +56,12 @@ class PointResponse(BaseModel):
     srid: int
 
 
+class PointListItem(BaseModel):
+    id: int
+    lat: float
+    lon: float
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     # This endpoint only proves the HTTP server is alive.
@@ -115,3 +121,29 @@ def create_point(point: PointCreate, db: DbConnection) -> PointResponse:
         lon=row["lon"],
         srid=row["srid"],
     )
+
+
+@app.get("/points")
+def get_points(db: DbConnection) -> list[PointListItem]:
+    sql = """
+        SELECT
+            id,
+            ST_Y(geom) AS lat,
+            ST_X(geom) AS lon
+        FROM points
+        ORDER BY id
+    """
+
+    try:
+        rows = db.execute(sql).fetchall()
+    except PsycopgError as exc:
+        raise HTTPException(status_code=503, detail="database unavailable") from exc
+
+    return [
+        PointListItem(
+            id=row["id"],
+            lat=row["lat"],
+            lon=row["lon"],
+        )
+        for row in rows
+    ]
