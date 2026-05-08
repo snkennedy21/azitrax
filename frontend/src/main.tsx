@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import Map from "ol/Map.js";
 import View from "ol/View.js";
 import TileLayer from "ol/layer/Tile.js";
-import OSM from "ol/source/OSM.js";
+import ImageTile from "ol/source/ImageTile.js";
 import { fromLonLat } from "ol/proj.js";
 import "ol/ol.css";
 import "./styles.css";
@@ -20,7 +20,11 @@ function App() {
       target: mapElement.current,
       layers: [
         new TileLayer({
-          source: new OSM(),
+          source: new ImageTile({
+            attributions:
+              '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+            url: "https://{a-d}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+          }),
         }),
       ],
       view: new View({
