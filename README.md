@@ -52,10 +52,14 @@ docker compose up -d db pgadmin
 
 Local defaults are documented in `.env.example`:
 
+- database host: `db` from Compose, or `127.0.0.1` when running the backend directly on the host
 - database: `vector`
 - user: `vector`
 - password: `vector`
 - database port: `5432`
+- database connection timeout: `5` seconds
+- database pool size: `1` minimum, `5` maximum
+- database pool wait timeout: `5` seconds
 - frontend port: `5173`
 - backend port: `8000`
 - pgAdmin URL: `http://127.0.0.1:5050`
@@ -72,6 +76,12 @@ Verify the database accepts connections and PostGIS is enabled:
 
 ```sh
 docker compose exec db psql -U vector -d vector -c "SELECT PostGIS_Version();"
+```
+
+Verify the backend can connect to Postgres/PostGIS:
+
+```sh
+curl http://127.0.0.1:8000/health/db
 ```
 
 Connect pgAdmin to PostGIS:
