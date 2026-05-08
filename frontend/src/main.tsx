@@ -1,20 +1,40 @@
-import React, { StrictMode } from "react";
+import { StrictMode, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
+import Map from "ol/Map.js";
+import View from "ol/View.js";
+import TileLayer from "ol/layer/Tile.js";
+import OSM from "ol/source/OSM.js";
+import { fromLonLat } from "ol/proj.js";
+import "ol/ol.css";
 import "./styles.css";
 
 function App() {
-  return (
-    <main className="app-shell">
-      <section className="intro">
-        <p className="eyebrow">Vector</p>
-        <h1>Minimal geospatial app</h1>
-        <p>
-          React is running locally. Map interactions will arrive in a later
-          slice.
-        </p>
-      </section>
-    </main>
-  );
+  const mapElement = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!mapElement.current) {
+      return;
+    }
+
+    const map = new Map({
+      target: mapElement.current,
+      layers: [
+        new TileLayer({
+          source: new OSM(),
+        }),
+      ],
+      view: new View({
+        center: fromLonLat([-73.9857, 40.7484]),
+        zoom: 12,
+      }),
+    });
+
+    return () => {
+      map.setTarget(undefined);
+    };
+  }, []);
+
+  return <div ref={mapElement} className="map" aria-label="OpenStreetMap base map" />;
 }
 
 const root = document.getElementById("root");
