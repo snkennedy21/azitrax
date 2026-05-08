@@ -1,15 +1,25 @@
 import { StrictMode, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import Map from "ol/Map.js";
 import View from "ol/View.js";
 import TileLayer from "ol/layer/Tile.js";
 import ImageTile from "ol/source/ImageTile.js";
 import { fromLonLat } from "ol/proj.js";
 import "ol/ol.css";
+import { getHealth } from "./api";
 import "./styles.css";
+
+const queryClient = new QueryClient();
 
 function App() {
   const mapElement = useRef<HTMLDivElement | null>(null);
+  const healthQuery = useQuery({
+    queryKey: ["health"],
+    queryFn: getHealth,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
 
   useEffect(() => {
     if (!mapElement.current) {
@@ -38,7 +48,14 @@ function App() {
     };
   }, []);
 
-  return <div ref={mapElement} className="map" aria-label="OpenStreetMap base map" />;
+  return (
+    <>
+      <div ref={mapElement} className="map" aria-label="OpenStreetMap base map" />
+      <div className="api-status" data-state={healthQuery.status}>
+        API {healthQuery.data?.status === "ok" ? "connected" : healthQuery.status}
+      </div>
+    </>
+  );
 }
 
 const root = document.getElementById("root");
@@ -49,6 +66,8 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
   </StrictMode>,
 );
