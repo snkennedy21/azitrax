@@ -1,8 +1,10 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+import os
 
 from fastapi import FastAPI
 from fastapi import HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from pydantic import Field
 from psycopg import Error as PsycopgError
@@ -39,6 +41,23 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 # Passing lifespan here tells FastAPI to run the startup/shutdown logic above.
 app = FastAPI(title="Vector API", lifespan=lifespan)
+
+frontend_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "FRONTEND_ORIGINS",
+        "http://127.0.0.1:5173,http://localhost:5173",
+    ).split(",")
+    if origin.strip()
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=frontend_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class PointCreate(BaseModel):

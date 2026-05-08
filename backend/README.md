@@ -46,6 +46,7 @@ The backend uses direct SQL through `psycopg` v3. Connection settings are read f
 - `POSTGRES_POOL_MIN_SIZE`: minimum open connections in the pool. Defaults to `1`.
 - `POSTGRES_POOL_MAX_SIZE`: maximum open connections in the pool. Defaults to `5`.
 - `POSTGRES_POOL_TIMEOUT`: seconds to wait for an available pooled connection. Defaults to `5`.
+- `FRONTEND_ORIGINS`: comma-separated origins allowed by CORS. Defaults to `http://127.0.0.1:5173,http://localhost:5173`.
 
 Use parameterized SQL for any query that includes external input:
 

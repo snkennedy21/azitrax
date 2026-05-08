@@ -26,6 +26,10 @@ docker compose up --build frontend
 
 Open the React app at `http://127.0.0.1:5173`.
 
+In development the frontend calls the API through Vite's `/api` proxy by
+default. The expected local backend URL is `http://127.0.0.1:8000` when running
+on the host, or `http://backend:8000` from the Compose frontend container.
+
 Start the backend API without the frontend:
 
 ```sh
@@ -62,6 +66,9 @@ Local defaults are documented in `.env.example`:
 - database pool wait timeout: `5` seconds
 - frontend port: `5173`
 - backend port: `8000`
+- frontend API base URL: `/api`
+- frontend API proxy target: `http://backend:8000` in Compose, or `http://127.0.0.1:8000` when running Vite directly on the host
+- allowed frontend CORS origins: `http://127.0.0.1:5173,http://localhost:5173`
 - pgAdmin URL: `http://127.0.0.1:5050`
 - pgAdmin email: `admin@example.com`
 - pgAdmin password: `vector`
