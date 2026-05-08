@@ -10,13 +10,21 @@ The Phase 0 goal is for a user to open a map, click to save a point, and see per
 
 - `frontend/`: React app. This will render the map, handle map clicks, call the backend API, and draw saved points.
 - `backend/`: FastAPI app. This will expose point endpoints, run SQL, and communicate with Postgres/PostGIS.
-- `compose.yaml`: Local Postgres/PostGIS and pgAdmin service configuration for development.
+- `compose.yaml`: Local frontend, backend, Postgres/PostGIS, and pgAdmin service configuration for development.
 - `minimal_geospatial_design.md`: Phase 0 design and architecture notes.
 - `github_issues_phase_0.md`: Initial GitHub issue backlog derived from the Phase 0 design.
 
 ## Local Services
 
 Local services are defined in `compose.yaml`.
+
+Start the frontend:
+
+```sh
+docker compose up --build frontend
+```
+
+Open the React app at `http://127.0.0.1:5173`.
 
 Start the backend API without the frontend:
 
@@ -48,6 +56,7 @@ Local defaults are documented in `.env.example`:
 - user: `vector`
 - password: `vector`
 - database port: `5432`
+- frontend port: `5173`
 - backend port: `8000`
 - pgAdmin URL: `http://127.0.0.1:5050`
 - pgAdmin email: `admin@example.com`
@@ -79,4 +88,4 @@ Connect pgAdmin to PostGIS:
    - `Password`: `vector`
 6. Save the server. The `vector` database should appear in the browser tree.
 
-The frontend app is intentionally not scaffolded yet. Its directory exists to establish the repository layout for upcoming tickets.
+The frontend currently mounts a minimal React app only. Map behavior is intentionally left for upcoming tickets.
