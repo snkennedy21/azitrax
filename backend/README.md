@@ -24,6 +24,14 @@ Check that it can connect to Postgres/PostGIS:
 curl http://127.0.0.1:8000/health/db
 ```
 
+Create a point:
+
+```sh
+curl -X POST http://127.0.0.1:8000/points \
+  -H "Content-Type: application/json" \
+  -d '{"lat": 40.7128, "lon": -74.0060}'
+```
+
 ## Database Configuration
 
 The backend uses direct SQL through `psycopg` v3. Connection settings are read from environment variables:

@@ -3,6 +3,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi import HTTPException
+from pydantic import BaseModel
+from pydantic import Field
 from psycopg import Error as PsycopgError
 
 from app.database import create_pool
@@ -39,6 +41,21 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(title="Vector API", lifespan=lifespan)
 
 
+class PointCreate(BaseModel):
+    # Latitude is the north/south coordinate. Valid WGS84 latitude is -90..90.
+    lat: float = Field(ge=-90, le=90)
+
+    # Longitude is the east/west coordinate. Valid WGS84 longitude is -180..180.
+    lon: float = Field(ge=-180, le=180)
+
+
+class PointResponse(BaseModel):
+    id: int
+    lat: float
+    lon: float
+    srid: int
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     # This endpoint only proves the HTTP server is alive.
@@ -66,3 +83,35 @@ def database_health(db: DbConnection) -> dict[str, str]:
 
     # Rows come back dict-like because database.py configured row_factory=dict_row.
     return {"status": "ok", "postgis_version": row["postgis_version"]}
+
+
+@app.post("/points", status_code=201)
+def create_point(point: PointCreate, db: DbConnection) -> PointResponse:
+    # PostGIS points are stored as X/Y coordinates. For geographic coordinates,
+    # X is longitude and Y is latitude, so ST_MakePoint must receive lon first.
+    sql = """
+        INSERT INTO points (geom)
+        VALUES (ST_SetSRID(ST_MakePoint(%s, %s), 4326))
+        RETURNING
+            id,
+            ST_Y(geom) AS lat,
+            ST_X(geom) AS lon,
+            ST_SRID(geom) AS srid
+    """
+
+    try:
+        # Parameters are passed separately from the SQL string. psycopg sends
+        # them safely to Postgres instead of interpolating them into the text.
+        row = db.execute(sql, (point.lon, point.lat)).fetchone()
+    except PsycopgError as exc:
+        raise HTTPException(status_code=503, detail="database unavailable") from exc
+
+    if row is None:
+        raise HTTPException(status_code=500, detail="point was not saved")
+
+    return PointResponse(
+        id=row["id"],
+        lat=row["lat"],
+        lon=row["lon"],
+        srid=row["srid"],
+    )
