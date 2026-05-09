@@ -70,8 +70,9 @@ export function SidePanel({ isOpen, width, onWidthChange, children }: SidePanelP
       className={`side-panel ${isOpen ? "side-panel--open" : ""}`}
       style={{ width: isOpen ? `${width}px` : 0 }}
     >
+      {children}
       <div className="side-panel__content" style={{ width: `${width}px` }}>
-        {children || (
+        {!children && (
           <div className="side-panel__placeholder">
             <p>Panel content will go here</p>
           </div>

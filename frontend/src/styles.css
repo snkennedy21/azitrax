@@ -22,7 +22,7 @@ body,
 
 /* App Layout */
 .app-layout {
-  display: flex;
+  position: relative;
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -30,20 +30,27 @@ body,
 
 /* Side Panel */
 .side-panel {
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
   height: 100%;
   background: var(--panel-bg);
   box-shadow: var(--panel-shadow);
-  overflow: hidden;
-  flex-shrink: 0;
+  overflow: visible;
   z-index: 10;
   transition: width var(--transition-duration) var(--transition-easing);
+  pointer-events: none;
+}
+
+.side-panel--open {
+  pointer-events: auto;
 }
 
 .side-panel__content {
   height: 100%;
   padding: 16px;
   overflow-y: auto;
+  overflow-x: hidden;
   opacity: 0;
   transition: opacity var(--transition-duration) var(--transition-easing);
 }
@@ -83,9 +90,10 @@ body,
 
 /* Map Container */
 .map-container {
-  position: relative;
-  flex: 1;
-  min-width: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
   height: 100%;
 }
 
@@ -98,7 +106,7 @@ body,
 .panel-toggle-button {
   position: absolute;
   top: 16px;
-  left: 16px;
+  right: -52px;
   z-index: 100;
   display: flex;
   align-items: center;
@@ -113,6 +121,7 @@ body,
   transition: background-color 0.2s ease, transform 0.1s ease;
   padding: 0;
   outline: none;
+  pointer-events: auto;
 }
 
 .panel-toggle-button:hover {
@@ -156,7 +165,7 @@ body,
 
 /* OpenLayers Controls */
 .ol-zoom {
-  top: 68px;
+  top: 16px;
   left: 16px;
 }
 
