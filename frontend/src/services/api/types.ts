@@ -1,14 +1,18 @@
-export type HealthResponse = {
-  status: string;
-};
+/**
+ * API type definitions.
+ *
+ * These types are generated from the backend OpenAPI schema.
+ * To regenerate: npm run generate:api-types
+ *
+ * IMPORTANT: The backend must be running for type generation to work.
+ */
 
-export type Point = {
-  id: number;
-  lat: number;
-  lon: number;
-};
-
-export type CreatePointPayload = {
-  lat: number;
-  lon: number;
-};
+export type {
+  PointCreate,
+  PointResponse,
+  PointListItem,
+  Point,
+  CreatePointPayload,
+  HealthResponse,
+  HealthDbResponse,
+} from "./type-helpers";

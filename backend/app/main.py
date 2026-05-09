@@ -5,12 +5,13 @@ import os
 from fastapi import FastAPI
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from pydantic import Field
 from psycopg import Error as PsycopgError
 
 from app.database import create_pool
 from app.database import DbConnection
+from app.schemas import PointCreate
+from app.schemas import PointListItem
+from app.schemas import PointResponse
 
 
 # FastAPI calls this function once when the app starts and resumes it once
@@ -58,27 +59,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-class PointCreate(BaseModel):
-    # Latitude is the north/south coordinate. Valid WGS84 latitude is -90..90.
-    lat: float = Field(ge=-90, le=90)
-
-    # Longitude is the east/west coordinate. Valid WGS84 longitude is -180..180.
-    lon: float = Field(ge=-180, le=180)
-
-
-class PointResponse(BaseModel):
-    id: int
-    lat: float
-    lon: float
-    srid: int
-
-
-class PointListItem(BaseModel):
-    id: int
-    lat: float
-    lon: float
 
 
 @app.get("/health")

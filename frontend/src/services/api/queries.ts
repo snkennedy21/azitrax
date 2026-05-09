@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiBaseUrl } from "../config";
-import type { HealthResponse, Point, CreatePointPayload } from "./types";
+import type {
+  HealthResponse,
+  Point,
+  CreatePointPayload,
+  PointResponse,
+} from "./types";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
@@ -43,7 +48,7 @@ export function useCreatePointMutation() {
 
   return useMutation({
     mutationFn: (payload: CreatePointPayload) =>
-      request<Point>("/points", {
+      request<PointResponse>("/points", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
