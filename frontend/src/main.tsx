@@ -1,4 +1,4 @@
-import { StrictMode, useState } from "react";
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SidePanel } from "./components/SidePanel";
@@ -9,20 +9,11 @@ import "./styles.css";
 const queryClient = new QueryClient();
 
 function App() {
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [panelWidth, setPanelWidth] = useState(320);
-
+  console.log("Render");
   return (
     <div className="app-layout">
-      <SidePanel
-        isOpen={isPanelOpen}
-        width={panelWidth}
-        onWidthChange={setPanelWidth}
-      >
-        <PanelToggleButton
-          isOpen={isPanelOpen}
-          onClick={() => setIsPanelOpen(!isPanelOpen)}
-        />
+      <SidePanel>
+        <PanelToggleButton />
       </SidePanel>
       <MapView />
     </div>

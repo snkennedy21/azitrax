@@ -1,13 +1,13 @@
-interface PanelToggleButtonProps {
-  isOpen: boolean;
-  onClick: () => void;
-}
+import { usePanelStore } from "../stores/panelStore";
 
-export function PanelToggleButton({ isOpen, onClick }: PanelToggleButtonProps) {
+export function PanelToggleButton() {
+  const isOpen = usePanelStore((state) => state.isPanelOpen);
+  const togglePanel = usePanelStore((state) => state.togglePanel);
+
   return (
     <button
       className="panel-toggle-button"
-      onClick={onClick}
+      onClick={togglePanel}
       aria-label={isOpen ? "Close panel" : "Open panel"}
       aria-expanded={isOpen}
       type="button"

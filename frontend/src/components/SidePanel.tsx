@@ -1,16 +1,18 @@
 import { ReactNode, useCallback, useEffect, useRef } from "react";
+import { usePanelStore } from "../stores/panelStore";
 
 interface SidePanelProps {
-  isOpen: boolean;
-  width: number;
-  onWidthChange: (width: number) => void;
   children?: ReactNode;
 }
 
 const MIN_WIDTH = 320;
 const MAX_WIDTH_PERCENT = 50;
 
-export function SidePanel({ isOpen, width, onWidthChange, children }: SidePanelProps) {
+export function SidePanel({ children }: SidePanelProps) {
+  const isOpen = usePanelStore((state) => state.isPanelOpen);
+  const width = usePanelStore((state) => state.panelWidth);
+  const setPanelWidth = usePanelStore((state) => state.setPanelWidth);
+
   const isResizingRef = useRef(false);
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
@@ -39,7 +41,7 @@ export function SidePanel({ isOpen, width, onWidthChange, children }: SidePanelP
       const maxWidth = (window.innerWidth * MAX_WIDTH_PERCENT) / 100;
 
       const constrainedWidth = Math.min(Math.max(newWidth, MIN_WIDTH), maxWidth);
-      onWidthChange(constrainedWidth);
+      setPanelWidth(constrainedWidth);
     };
 
     const handleMouseUp = () => {
@@ -62,7 +64,7 @@ export function SidePanel({ isOpen, width, onWidthChange, children }: SidePanelP
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [onWidthChange]);
+  }, [setPanelWidth]);
 
   return (
     <aside
