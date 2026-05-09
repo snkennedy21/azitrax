@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiBaseUrl } from "../config";
-import type { HealthResponse, Point } from "./types";
+import type { HealthResponse, Point, CreatePointPayload } from "./types";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
@@ -12,7 +12,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `API request failed: ${response.status} ${response.statusText}`,
+    );
   }
 
   return response.json() as Promise<T>;
@@ -35,11 +37,6 @@ export function useGetPointsQuery() {
     retry: 1,
   });
 }
-
-type CreatePointPayload = {
-  lat: number;
-  lon: number;
-};
 
 export function useCreatePointMutation() {
   const queryClient = useQueryClient();
