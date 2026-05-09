@@ -1,9 +1,12 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { IoSettings, IoInformationCircle } from "react-icons/io5";
 import { SidePanel } from "./components/SidePanel";
 import { PanelToggleButton } from "./components/PanelToggleButton";
 import { MapView } from "./components/MapView";
+import { SettingsPanelContent } from "./components/SettingsPanelContent";
+import { InfoPanelContent } from "./components/InfoPanelContent";
 import "./styles/global.scss";
 
 const queryClient = new QueryClient();
@@ -13,7 +16,18 @@ function App() {
   return (
     <div className="app-layout">
       <SidePanel>
-        <PanelToggleButton />
+        <PanelToggleButton
+          content={<SettingsPanelContent />}
+          ariaLabel="Toggle settings panel"
+        >
+          <IoSettings size={20} />
+        </PanelToggleButton>
+        <PanelToggleButton
+          content={<InfoPanelContent />}
+          ariaLabel="Toggle information panel"
+        >
+          <IoInformationCircle size={20} />
+        </PanelToggleButton>
       </SidePanel>
       <MapView />
     </div>

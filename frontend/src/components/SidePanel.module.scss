@@ -17,6 +17,17 @@
   pointer-events: auto;
 }
 
+.toggleButtons {
+  position: absolute;
+  top: $spacing16;
+  right: -52px;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing8;
+  pointer-events: auto;
+  z-index: $zIndexToggleButton;
+}
+
 .content {
   height: 100%;
   padding: $spacing16;

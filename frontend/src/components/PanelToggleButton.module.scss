@@ -1,10 +1,6 @@
 @use '../styles/variables' as *;
 
 .panelToggleButton {
-  position: absolute;
-  top: $spacing16;
-  right: -52px;
-  z-index: $zIndexToggleButton;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -18,7 +14,6 @@
   transition: background-color 0.2s ease, transform 0.1s ease;
   padding: 0;
   outline: none;
-  pointer-events: auto;
 
   &:hover {
     background: $colorDarkBgHover;
@@ -31,6 +26,16 @@
   &:focus-visible {
     outline: 2px solid $colorBlue500;
     outline-offset: 2px;
+  }
+
+  &.active {
+    background: $colorBlue600;
+    border-color: $colorBlue500;
+    color: $colorSlate50;
+
+    &:hover {
+      background: #1d4ed8;
+    }
   }
 }
 

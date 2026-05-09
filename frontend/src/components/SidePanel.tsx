@@ -13,6 +13,7 @@ const MAX_WIDTH_PERCENT = 50;
 export function SidePanel({ children }: SidePanelProps) {
   const isOpen = usePanelStore((state) => state.isPanelOpen);
   const width = usePanelStore((state) => state.panelWidth);
+  const panelContent = usePanelStore((state) => state.panelContent);
   const setPanelWidth = usePanelStore((state) => state.setPanelWidth);
 
   const isResizingRef = useRef(false);
@@ -20,19 +21,22 @@ export function SidePanel({ children }: SidePanelProps) {
   const startWidthRef = useRef(0);
   const panelRef = useRef<HTMLElement>(null);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    isResizingRef.current = true;
-    startXRef.current = e.clientX;
-    startWidthRef.current = width;
-    document.body.style.cursor = "ew-resize";
-    document.body.style.userSelect = "none";
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      isResizingRef.current = true;
+      startXRef.current = e.clientX;
+      startWidthRef.current = width;
+      document.body.style.cursor = "ew-resize";
+      document.body.style.userSelect = "none";
 
-    // Disable transition during resize
-    if (panelRef.current) {
-      panelRef.current.style.transition = "none";
-    }
-  }, [width]);
+      // Disable transition during resize
+      if (panelRef.current) {
+        panelRef.current.style.transition = "none";
+      }
+    },
+    [width],
+  );
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -42,7 +46,10 @@ export function SidePanel({ children }: SidePanelProps) {
       const newWidth = startWidthRef.current + delta;
       const maxWidth = (window.innerWidth * MAX_WIDTH_PERCENT) / 100;
 
-      const constrainedWidth = Math.min(Math.max(newWidth, MIN_WIDTH), maxWidth);
+      const constrainedWidth = Math.min(
+        Math.max(newWidth, MIN_WIDTH),
+        maxWidth,
+      );
       setPanelWidth(constrainedWidth);
     };
 
@@ -74,13 +81,9 @@ export function SidePanel({ children }: SidePanelProps) {
       className={clsx(styles.sidePanel, isOpen && styles.open)}
       style={{ width: isOpen ? `${width}px` : 0 }}
     >
-      {children}
+      <div className={styles.toggleButtons}>{children}</div>
       <div className={styles.content} style={{ width: `${width}px` }}>
-        {!children && (
-          <div className={styles.placeholder}>
-            <p>Panel content will go here</p>
-          </div>
-        )}
+        {panelContent}
       </div>
       {isOpen && (
         <div
