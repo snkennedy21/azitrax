@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Map from "ol/Map.js";
 import View from "ol/View.js";
 import TileLayer from "ol/layer/Tile.js";
@@ -8,9 +8,11 @@ import VectorSource from "ol/source/Vector.js";
 import Feature from "ol/Feature.js";
 import Point from "ol/geom/Point.js";
 import { Circle as CircleStyle, Fill, Stroke, Style } from "ol/style.js";
-import { fromLonLat } from "ol/proj.js";
+import { fromLonLat, toLonLat } from "ol/proj.js";
 import "ol/ol.css";
-import { useGetHealthQuery, useGetPointsQuery } from "@/services/api";
+import { useGetHealthQuery, useGetPointsQuery, useCreatePointMutation } from "@/services/api";
+import { useMapModeStore } from "@/store/mapModeStore";
+import { MapModeToggle } from "../MapModeToggle/MapModeToggle";
 import styles from "./styles.module.scss";
 
 export function MapView() {
@@ -20,6 +22,10 @@ export function MapView() {
 
   const { data: healthData, status: healthStatus } = useGetHealthQuery();
   const { data: pointsData } = useGetPointsQuery();
+  const createPointMutation = useCreatePointMutation();
+  const mode = useMapModeStore((state) => state.mode);
+
+  const [creationStatus, setCreationStatus] = useState<"idle" | "creating" | "success" | "error">("idle");
 
   useEffect(() => {
     if (!mapElement.current) {
@@ -60,12 +66,50 @@ export function MapView() {
     mapRef.current = map;
     vectorLayerRef.current = vectorLayer;
 
+    // Add click handler for creating points
+    const handleMapClick = (event: any) => {
+      // Only create points if in createPoint mode
+      if (mode !== "createPoint") {
+        return;
+      }
+
+      // Prevent rapid clicks while mutation is pending
+      if (createPointMutation.isPending) {
+        return;
+      }
+
+      // Get clicked coordinates (in EPSG:3857 Web Mercator)
+      const clickedCoordinate = event.coordinate;
+
+      // Convert to WGS84 (EPSG:4326) lon/lat
+      const [lon, lat] = toLonLat(clickedCoordinate);
+
+      // Call mutation to create point
+      setCreationStatus("creating");
+      createPointMutation.mutate(
+        { lat, lon },
+        {
+          onSuccess: () => {
+            setCreationStatus("success");
+            setTimeout(() => setCreationStatus("idle"), 2000);
+          },
+          onError: () => {
+            setCreationStatus("error");
+            setTimeout(() => setCreationStatus("idle"), 3000);
+          },
+        }
+      );
+    };
+
+    map.on("singleclick", handleMapClick);
+
     return () => {
+      map.un("singleclick", handleMapClick);
       map.setTarget(undefined);
       mapRef.current = null;
       vectorLayerRef.current = null;
     };
-  }, []);
+  }, [mode, createPointMutation]);
 
   useEffect(() => {
     if (!vectorLayerRef.current || !pointsData) {
@@ -95,10 +139,22 @@ export function MapView() {
       <div
         ref={mapElement}
         className={styles.map}
+        data-cursor-mode={mode}
         aria-label="OpenStreetMap base map"
       />
+      <MapModeToggle />
       <div className={styles.apiStatus} data-state={healthStatus}>
         API {healthData?.status === "ok" ? "connected" : healthStatus}
+        {creationStatus !== "idle" && (
+          <span>
+            {" • "}
+            {creationStatus === "creating"
+              ? "Creating point..."
+              : creationStatus === "success"
+              ? "Point created!"
+              : "Failed to create point"}
+          </span>
+        )}
       </div>
     </div>
   );

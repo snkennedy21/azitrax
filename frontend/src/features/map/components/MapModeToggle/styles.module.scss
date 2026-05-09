@@ -1,0 +1,44 @@
+@use '../../../../styles/variables' as *;
+
+.mapModeToggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid $colorDarkBorder;
+  border-radius: $borderRadius8;
+  background: $colorDarkBg;
+  color: $colorSlate50;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  padding: 0;
+  outline: none;
+  z-index: 10;
+
+  &:hover {
+    background: $colorDarkBgHover;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $colorBlue500;
+    outline-offset: 2px;
+  }
+
+  &.active {
+    background: $colorBlue600;
+    border-color: $colorBlue500;
+    color: $colorSlate50;
+
+    &:hover {
+      background: #1d4ed8;
+    }
+  }
+}

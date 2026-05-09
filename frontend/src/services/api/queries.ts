@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiBaseUrl } from "../config";
 import type { HealthResponse, Point } from "./types";
 
@@ -33,5 +33,28 @@ export function useGetPointsQuery() {
     queryFn: () => request<Point[]>("/points"),
     refetchOnWindowFocus: false,
     retry: 1,
+  });
+}
+
+type CreatePointPayload = {
+  lat: number;
+  lon: number;
+};
+
+export function useCreatePointMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: CreatePointPayload) =>
+      request<Point>("/points", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["points"] });
+    },
   });
 }

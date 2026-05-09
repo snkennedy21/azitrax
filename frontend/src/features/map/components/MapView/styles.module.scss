@@ -11,6 +11,10 @@
 .map {
   width: 100%;
   height: 100%;
+
+  &[data-cursor-mode="createPoint"] {
+    cursor: crosshair;
+  }
 }
 
 .apiStatus {
