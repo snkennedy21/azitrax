@@ -1,7 +1,7 @@
 import { ReactNode, useCallback, useEffect, useRef } from "react";
 import clsx from "clsx";
-import { usePanelStore } from "../stores/panelStore";
-import styles from "./SidePanel.module.scss";
+import { usePanelStore } from "@/store/panelStore";
+import styles from "./styles.module.scss";
 
 interface SidePanelProps {
   children?: ReactNode;

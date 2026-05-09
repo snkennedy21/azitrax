@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import clsx from "clsx";
-import { usePanelStore } from "../stores/panelStore";
-import styles from "./PanelToggleButton.module.scss";
+import { usePanelStore } from "@/store/panelStore";
+import styles from "./styles.module.scss";
 
 interface PanelToggleButtonProps {
   children: ReactNode;

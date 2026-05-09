@@ -10,8 +10,8 @@ import Point from "ol/geom/Point.js";
 import { Circle as CircleStyle, Fill, Stroke, Style } from "ol/style.js";
 import { fromLonLat } from "ol/proj.js";
 import "ol/ol.css";
-import { useGetHealthQuery, useGetPointsQuery } from "../api";
-import styles from "./MapView.module.scss";
+import { useGetHealthQuery, useGetPointsQuery } from "@/services/api";
+import styles from "./styles.module.scss";
 
 export function MapView() {
   const mapElement = useRef<HTMLDivElement | null>(null);

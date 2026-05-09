@@ -2,11 +2,13 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { IoSettings, IoInformationCircle } from "react-icons/io5";
-import { SidePanel } from "./components/SidePanel";
-import { PanelToggleButton } from "./components/PanelToggleButton";
-import { MapView } from "./components/MapView";
-import { SettingsPanelContent } from "./components/SettingsPanelContent";
-import { InfoPanelContent } from "./components/InfoPanelContent";
+import { MapView } from "./features/map";
+import {
+  SidePanel,
+  PanelToggleButton,
+  InfoPanelContent,
+  SettingsPanelContent,
+} from "./features/panels";
 import "./styles/global.scss";
 
 const queryClient = new QueryClient();
