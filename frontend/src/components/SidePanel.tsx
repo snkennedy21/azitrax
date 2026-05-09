@@ -1,5 +1,7 @@
 import { ReactNode, useCallback, useEffect, useRef } from "react";
+import clsx from "clsx";
 import { usePanelStore } from "../stores/panelStore";
+import styles from "./SidePanel.module.scss";
 
 interface SidePanelProps {
   children?: ReactNode;
@@ -69,20 +71,20 @@ export function SidePanel({ children }: SidePanelProps) {
   return (
     <aside
       ref={panelRef}
-      className={`side-panel ${isOpen ? "side-panel--open" : ""}`}
+      className={clsx(styles.sidePanel, isOpen && styles.open)}
       style={{ width: isOpen ? `${width}px` : 0 }}
     >
       {children}
-      <div className="side-panel__content" style={{ width: `${width}px` }}>
+      <div className={styles.content} style={{ width: `${width}px` }}>
         {!children && (
-          <div className="side-panel__placeholder">
+          <div className={styles.placeholder}>
             <p>Panel content will go here</p>
           </div>
         )}
       </div>
       {isOpen && (
         <div
-          className="side-panel__resize-handle"
+          className={styles.resizeHandle}
           onMouseDown={handleMouseDown}
           role="separator"
           aria-orientation="vertical"

@@ -1,0 +1,58 @@
+// Design Tokens - Global Variables
+// These variables define the design system tokens used throughout the application
+
+// Panel
+$panelWidth: 320px;
+$panelBg: #ffffff;
+$panelShadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+// Transitions
+$transitionDuration: 0.3s;
+$transitionEasing: cubic-bezier(0.4, 0, 0.2, 1);
+
+// Colors
+$colorBlue500: #3b82f6;
+$colorBlue600: #2563eb;
+$colorSlate500: #64748b;
+$colorSlate50: #f8fafc;
+$colorWhite: #ffffff;
+$colorBgLight: #eef1f2;
+
+// Dark UI Colors
+$colorDarkBg: rgba(12, 18, 20, 0.86);
+$colorDarkBgHover: rgba(12, 18, 20, 0.95);
+$colorDarkBorder: rgba(255, 255, 255, 0.2);
+$colorErrorBg: rgba(127, 29, 29, 0.9);
+
+// Spacing
+$spacing4: 4px;
+$spacing8: 8px;
+$spacing10: 10px;
+$spacing16: 16px;
+
+// Borders
+$borderRadius8: 8px;
+
+// Typography
+$fontSystemUi: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+$fontWeight400: 400;
+$fontWeight600: 600;
+$fontSize13: 13px;
+$fontSize14: 14px;
+$lineHeight13: 1.3;
+$lineHeight15: 1.5;
+
+// Z-index layers
+$zIndexPanel: 10;
+$zIndexResizeHandle: 20;
+$zIndexToggleButton: 100;
+$zIndexApiStatus: 1;
+$zIndexPanelMobile: 1000;
+
+// Responsive breakpoints
+$breakpointTablet: 768px;
+$breakpointMobile: 480px;
+
+// Panel width responsive
+$panelWidthTablet: 280px;
+$panelWidthMobile: 100%;

@@ -1,0 +1,32 @@
+@use '../styles/variables' as *;
+
+.mapContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.map {
+  width: 100%;
+  height: 100%;
+}
+
+.apiStatus {
+  position: absolute;
+  right: $spacing16;
+  bottom: $spacing16;
+  z-index: $zIndexApiStatus;
+  border: 1px solid $colorDarkBorder;
+  border-radius: $borderRadius8;
+  background: $colorDarkBg;
+  color: $colorSlate50;
+  font: $fontWeight600 $fontSize13 $fontSystemUi;
+  line-height: $lineHeight13;
+  padding: $spacing8 $spacing10;
+
+  &[data-state="error"] {
+    background: $colorErrorBg;
+  }
+}

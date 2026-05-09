@@ -11,6 +11,7 @@ import { Circle as CircleStyle, Fill, Stroke, Style } from "ol/style.js";
 import { fromLonLat } from "ol/proj.js";
 import "ol/ol.css";
 import { useGetHealthQuery, useGetPointsQuery } from "../api";
+import styles from "./MapView.module.scss";
 
 export function MapView() {
   const mapElement = useRef<HTMLDivElement | null>(null);
@@ -90,13 +91,13 @@ export function MapView() {
   }, [pointsData]);
 
   return (
-    <div className="map-container">
+    <div className={styles.mapContainer}>
       <div
         ref={mapElement}
-        className="map"
+        className={styles.map}
         aria-label="OpenStreetMap base map"
       />
-      <div className="api-status" data-state={healthStatus}>
+      <div className={styles.apiStatus} data-state={healthStatus}>
         API {healthData?.status === "ok" ? "connected" : healthStatus}
       </div>
     </div>

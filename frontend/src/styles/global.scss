@@ -1,0 +1,33 @@
+// Global Styles
+@use './variables' as *;
+
+:root {
+  background: $colorBgLight;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-width: 320px;
+  width: 100%;
+  height: 100%;
+}
+
+// App Layout
+.app-layout {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+// OpenLayers Controls
+.ol-zoom {
+  top: $spacing16;
+  left: $spacing16;
+}

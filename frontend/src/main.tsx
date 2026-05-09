@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SidePanel } from "./components/SidePanel";
 import { PanelToggleButton } from "./components/PanelToggleButton";
 import { MapView } from "./components/MapView";
-import "./styles.css";
+import "./styles/global.scss";
 
 const queryClient = new QueryClient();
 
