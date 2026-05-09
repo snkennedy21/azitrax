@@ -1,7 +1,14 @@
+import { useQuery } from "@tanstack/react-query";
 import { apiBaseUrl } from "./config";
 
 export type HealthResponse = {
   status: string;
+};
+
+export type Point = {
+  id: number;
+  lat: number;
+  lon: number;
 };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -20,6 +27,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function getHealth(): Promise<HealthResponse> {
-  return request<HealthResponse>("/health");
+function useGetHealthQuery() {
+  return useQuery({
+    queryKey: ["health"],
+    queryFn: () => request<HealthResponse>("/health"),
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
 }
+
+function useGetPointsQuery() {
+  return useQuery({
+    queryKey: ["points"],
+    queryFn: () => request<Point[]>("/points"),
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
+}
+
+export { useGetHealthQuery, useGetPointsQuery };

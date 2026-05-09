@@ -1,5 +1,10 @@
 :root {
   background: #eef1f2;
+  --panel-width: 320px;
+  --panel-bg: #ffffff;
+  --panel-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --transition-duration: 0.3s;
+  --transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
@@ -15,13 +20,125 @@ body,
   height: 100%;
 }
 
+/* App Layout */
+.app-layout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Side Panel */
+.side-panel {
+  position: relative;
+  height: 100%;
+  background: var(--panel-bg);
+  box-shadow: var(--panel-shadow);
+  overflow: hidden;
+  flex-shrink: 0;
+  z-index: 10;
+  transition: width var(--transition-duration) var(--transition-easing);
+}
+
+.side-panel__content {
+  height: 100%;
+  padding: 16px;
+  overflow-y: auto;
+  opacity: 0;
+  transition: opacity var(--transition-duration) var(--transition-easing);
+}
+
+.side-panel--open .side-panel__content {
+  opacity: 1;
+}
+
+.side-panel__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #64748b;
+  font: 400 14px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.side-panel__resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  cursor: ew-resize;
+  background: transparent;
+  transition: background-color 0.2s ease;
+  z-index: 20;
+}
+
+.side-panel__resize-handle:hover {
+  background: #3b82f6;
+}
+
+.side-panel__resize-handle:active {
+  background: #2563eb;
+}
+
+/* Map Container */
+.map-container {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
 .map {
   width: 100%;
   height: 100%;
 }
 
+/* Panel Toggle Button */
+.panel-toggle-button {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(12, 18, 20, 0.86);
+  color: #f8fafc;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  padding: 0;
+  outline: none;
+}
+
+.panel-toggle-button:hover {
+  background: rgba(12, 18, 20, 0.95);
+}
+
+.panel-toggle-button:active {
+  transform: scale(0.95);
+}
+
+.panel-toggle-button:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.panel-toggle-button__icon {
+  transition: transform var(--transition-duration) var(--transition-easing);
+}
+
+.panel-toggle-button__icon--rotated {
+  transform: rotate(180deg);
+}
+
+/* API Status */
 .api-status {
-  position: fixed;
+  position: absolute;
   right: 16px;
   bottom: 16px;
   z-index: 1;
@@ -37,7 +154,27 @@ body,
   background: rgba(127, 29, 29, 0.9);
 }
 
+/* OpenLayers Controls */
 .ol-zoom {
-  top: 16px;
+  top: 68px;
   left: 16px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  :root {
+    --panel-width: 280px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --panel-width: 100%;
+  }
+
+  .side-panel--open {
+    position: absolute;
+    width: 100%;
+    z-index: 1000;
+  }
 }
