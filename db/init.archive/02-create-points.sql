@@ -1,5 +1,0 @@
-CREATE TABLE IF NOT EXISTS points (
-  id BIGSERIAL PRIMARY KEY,
-  geom GEOMETRY(Point, 4326),
-  created_at TIMESTAMP DEFAULT NOW()
-);
