@@ -9,6 +9,8 @@ from psycopg import Error as PsycopgError
 
 from app.database import create_pool
 from app.database import DbConnection
+from app.migrations import run_migrations
+from app.migrations import validate_migrations
 from app.schemas import PointCreate
 from app.schemas import PointListItem
 from app.schemas import PointResponse
@@ -19,6 +21,17 @@ from app.schemas import PointResponse
 # live for the whole process, like a database connection pool.
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    # Run database migrations before opening connection pool.
+    # This ensures schema is up-to-date before any API requests are processed.
+    try:
+        validate_migrations()
+        run_migrations()
+    except RuntimeError as exc:
+        # Migration failures are fatal - log error and exit.
+        # Docker will restart the container, retrying until migrations succeed.
+        print(f"Fatal error during database migrations: {exc}")
+        raise
+
     # Build the pool from environment variables in app.database.DatabaseConfig.
     # This does not run SQL yet; it prepares a reusable pool of connections.
     db_pool = create_pool()
