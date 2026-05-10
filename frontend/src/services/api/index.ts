@@ -5,8 +5,7 @@ export {
 } from "./queries";
 export type {
   HealthResponse,
-  Point,
+  PointCreate,
   PointResponse,
   PointListItem,
-  CreatePointPayload,
 } from "./types";

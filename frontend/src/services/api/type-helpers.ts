@@ -15,10 +15,6 @@ export type PointCreate = components["schemas"]["PointCreate"];
 export type PointResponse = components["schemas"]["PointResponse"];
 export type PointListItem = components["schemas"]["PointListItem"];
 
-// Legacy aliases for backward compatibility
-export type Point = PointListItem;
-export type CreatePointPayload = PointCreate;
-
 // Health check types (not in schema components, defined manually)
 export type HealthResponse = {
   status: string;

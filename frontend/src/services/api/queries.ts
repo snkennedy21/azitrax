@@ -2,8 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiBaseUrl } from "../config";
 import type {
   HealthResponse,
-  Point,
-  CreatePointPayload,
+  PointListItem,
+  PointCreate,
   PointResponse,
 } from "./types";
 
@@ -37,7 +37,7 @@ export function useGetHealthQuery() {
 export function useGetPointsQuery() {
   return useQuery({
     queryKey: ["points"],
-    queryFn: () => request<Point[]>("/points"),
+    queryFn: () => request<PointListItem[]>("/points"),
     refetchOnWindowFocus: false,
     retry: 1,
   });
@@ -47,7 +47,7 @@ export function useCreatePointMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: CreatePointPayload) =>
+    mutationFn: (payload: PointCreate) =>
       request<PointResponse>("/points", {
         method: "POST",
         headers: {

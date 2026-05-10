@@ -11,8 +11,6 @@ export type {
   PointCreate,
   PointResponse,
   PointListItem,
-  Point,
-  CreatePointPayload,
   HealthResponse,
   HealthDbResponse,
 } from "./type-helpers";
