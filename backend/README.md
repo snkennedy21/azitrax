@@ -57,3 +57,53 @@ def get_point(db: DbConnection):
         (point_id,),
     ).fetchone()
 ```
+
+## Testing
+
+The backend uses pytest for testing with a separate test database for isolation.
+
+### Setup
+
+1. The `vector_test` database is created automatically when you start Docker Compose (via init script in `db-init/`)
+
+2. Install test dependencies:
+   ```sh
+   pip install -r requirements.txt
+   ```
+
+### Running Tests
+
+**Local** (from `/backend` directory):
+```sh
+# Set test database environment variables
+export TEST_POSTGRES_HOST=127.0.0.1
+export TEST_POSTGRES_DB=vector_test
+
+# Run all tests
+pytest
+
+# Run specific test file
+pytest tests/test_health.py
+
+# Run with verbose output
+pytest -v
+```
+
+**Docker**:
+```sh
+# Run tests in backend container
+docker compose exec backend pytest
+
+# Run with verbose output
+docker compose exec backend pytest -v
+```
+
+### Test Structure
+
+- `tests/conftest.py` - Shared fixtures (database pool, client, cleanup)
+- `tests/test_health.py` - Health endpoint tests
+- `pytest.ini` - Pytest configuration
+
+### Database Isolation
+
+Tests run against a separate `vector_test` database. Each test automatically cleans up data using `TRUNCATE TABLE` to ensure isolation between tests.
