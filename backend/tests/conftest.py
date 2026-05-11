@@ -33,13 +33,14 @@ def pytest_sessionstart(session):
     default_host = os.getenv("POSTGRES_HOST", "127.0.0.1")
 
     # Set environment variables for Flyway to use test database
+    # Only override database name and optionally host - reuse credentials and port
     test_env = os.environ.copy()
     test_env.update({
         "POSTGRES_HOST": os.getenv("TEST_POSTGRES_HOST", default_host),
-        "POSTGRES_PORT": os.getenv("TEST_POSTGRES_PORT", "5432"),
+        "POSTGRES_PORT": os.getenv("POSTGRES_PORT", "5432"),
         "POSTGRES_DB": os.getenv("TEST_POSTGRES_DB", "vector_test"),
-        "POSTGRES_USER": os.getenv("TEST_POSTGRES_USER", "vector"),
-        "POSTGRES_PASSWORD": os.getenv("TEST_POSTGRES_PASSWORD", "vector"),
+        "POSTGRES_USER": os.getenv("POSTGRES_USER", "vector"),
+        "POSTGRES_PASSWORD": os.getenv("POSTGRES_PASSWORD", "vector"),
     })
 
     print("\n" + "=" * 80, file=sys.stderr)
@@ -78,8 +79,9 @@ def pytest_sessionstart(session):
 def test_db_config() -> DatabaseConfig:
     """Database configuration for tests.
 
-    Uses environment variables with TEST_ prefix or falls back to defaults.
-    This allows running tests against a separate test database.
+    Reuses production database credentials and settings, but connects to
+    a separate test database (TEST_POSTGRES_DB). Optionally override host
+    with TEST_POSTGRES_HOST for local testing.
 
     Defaults to 'db' hostname for Docker, or '127.0.0.1' for local.
     """
@@ -88,16 +90,16 @@ def test_db_config() -> DatabaseConfig:
     default_host = os.getenv("POSTGRES_HOST", "127.0.0.1")
 
     return DatabaseConfig(
-        database_url=os.getenv("TEST_DATABASE_URL"),
+        database_url=None,  # Build from components instead
         host=os.getenv("TEST_POSTGRES_HOST", default_host),
-        port=int(os.getenv("TEST_POSTGRES_PORT", "5432")),
+        port=int(os.getenv("POSTGRES_PORT", "5432")),
         dbname=os.getenv("TEST_POSTGRES_DB", "vector_test"),
-        user=os.getenv("TEST_POSTGRES_USER", "vector"),
-        password=os.getenv("TEST_POSTGRES_PASSWORD", "vector"),
-        connect_timeout=int(os.getenv("TEST_POSTGRES_CONNECT_TIMEOUT", "5")),
-        pool_min_size=int(os.getenv("TEST_POSTGRES_POOL_MIN_SIZE", "1")),
-        pool_max_size=int(os.getenv("TEST_POSTGRES_POOL_MAX_SIZE", "5")),
-        pool_timeout=float(os.getenv("TEST_POSTGRES_POOL_TIMEOUT", "5")),
+        user=os.getenv("POSTGRES_USER", "vector"),
+        password=os.getenv("POSTGRES_PASSWORD", "vector"),
+        connect_timeout=int(os.getenv("POSTGRES_CONNECT_TIMEOUT", "5")),
+        pool_min_size=int(os.getenv("POSTGRES_POOL_MIN_SIZE", "1")),
+        pool_max_size=int(os.getenv("POSTGRES_POOL_MAX_SIZE", "5")),
+        pool_timeout=float(os.getenv("POSTGRES_POOL_TIMEOUT", "5")),
     )
 
 
