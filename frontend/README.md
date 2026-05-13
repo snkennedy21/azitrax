@@ -55,4 +55,8 @@ Environment variables:
 ## Current Scope
 
 The app currently renders the OpenLayers map and checks backend health through
-React Query. Point rendering and map click handling are not implemented yet.
+React Query. In create-point mode, map clicks save points through the backend API
+and persisted points render as markers when the browser reloads.
+
+For the current manual browser checklist, see
+[../docs/smoke-test.md](../docs/smoke-test.md).
