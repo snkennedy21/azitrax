@@ -11,6 +11,7 @@ The Phase 0 goal is for a user to open a map, click to save a point, and see per
 - `frontend/`: React app. This will render the map, handle map clicks, call the backend API, and draw saved points.
 - `backend/`: FastAPI app. This will expose point endpoints, run SQL, and communicate with Postgres/PostGIS.
 - `compose.yaml`: Local frontend, backend, Postgres/PostGIS, and pgAdmin service configuration for development.
+- `docs/smoke-test.md`: Manual browser smoke test for the Phase 0 map workflow.
 - `minimal_geospatial_design.md`: Phase 0 design and architecture notes.
 - `github_issues_phase_0.md`: Initial GitHub issue backlog derived from the Phase 0 design.
 
@@ -105,7 +106,9 @@ Connect pgAdmin to PostGIS:
    - `Password`: `vector`
 6. Save the server. The `vector` database should appear in the browser tree.
 
-The frontend currently mounts a minimal React app only. Map behavior is intentionally left for upcoming tickets.
+The frontend renders an OpenLayers map, shows backend API health, lets users add
+point markers in create-point mode, and reloads persisted points from PostGIS.
+For the end-to-end browser checklist, see [docs/smoke-test.md](docs/smoke-test.md).
 
 ## Type Generation
 
