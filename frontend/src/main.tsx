@@ -14,7 +14,6 @@ import "./styles/global.scss";
 const queryClient = new QueryClient();
 
 function App() {
-  console.log("Render");
   return (
     <div className="app-layout">
       <SidePanel>

@@ -8,8 +8,8 @@ The Phase 0 goal is for a user to open a map, click to save a point, and see per
 
 ## Project Layout
 
-- `frontend/`: React app. This will render the map, handle map clicks, call the backend API, and draw saved points.
-- `backend/`: FastAPI app. This will expose point endpoints, run SQL, and communicate with Postgres/PostGIS.
+- `frontend/`: React app that renders the map, handles map clicks, calls the backend API, and draws saved points.
+- `backend/`: FastAPI app that exposes point endpoints, runs SQL, and communicates with Postgres/PostGIS.
 - `compose.yaml`: Local frontend, backend, Postgres/PostGIS, and pgAdmin service configuration for development.
 - `docs/smoke-test.md`: Manual browser smoke test for the Phase 0 map workflow.
 - `minimal_geospatial_design.md`: Phase 0 design and architecture notes.
