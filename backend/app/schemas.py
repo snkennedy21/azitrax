@@ -47,3 +47,16 @@ class PointListItem(APIBaseModel):
     id: int = Field(description="Unique point identifier")
     lat: float = Field(description="Latitude coordinate (WGS84)")
     lon: float = Field(description="Longitude coordinate (WGS84)")
+
+
+class AisVesselRecord(APIBaseModel):
+    mmsi: int = Field(description="Maritime Mobile Service Identity")
+    ship_name: str | None = Field(default=None, description="Vessel name when provided by AIS source")
+    lat: float = Field(ge=-90, le=90, description="Latitude coordinate (WGS84)")
+    lon: float = Field(ge=-180, le=180, description="Longitude coordinate (WGS84)")
+    time_utc: str | None = Field(default=None, description="Source receive time in UTC when provided")
+    sog: float | None = Field(default=None, description="Speed over ground")
+    cog: float | None = Field(default=None, description="Course over ground")
+    true_heading: int | None = Field(default=None, description="True heading")
+    navigational_status: int | None = Field(default=None, description="AIS navigational status")
+    position_accuracy: bool | None = Field(default=None, description="AIS position accuracy flag")

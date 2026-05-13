@@ -1,0 +1,95 @@
+[
+  {
+    "Message": {
+      "PositionReport": {
+        "Cog": 128.4,
+        "CommunicationState": 81982,
+        "Latitude": 40.67472,
+        "Longitude": -74.04514,
+        "MessageID": 1,
+        "NavigationalStatus": 0,
+        "PositionAccuracy": true,
+        "Raim": false,
+        "RateOfTurn": 0,
+        "RepeatIndicator": 0,
+        "Sog": 8.7,
+        "Spare": 0,
+        "SpecialManoeuvreIndicator": 0,
+        "Timestamp": 22,
+        "TrueHeading": 130,
+        "UserID": 367123456,
+        "Valid": true
+      }
+    },
+    "MessageType": "PositionReport",
+    "MetaData": {
+      "MMSI": 367123456,
+      "ShipName": "HARBOR PILOT",
+      "latitude": 40.67472,
+      "longitude": -74.04514,
+      "time_utc": "2026-05-13 16:00:22.000000 +0000 UTC"
+    }
+  },
+  {
+    "Message": {
+      "PositionReport": {
+        "Cog": 12.1,
+        "CommunicationState": 67212,
+        "Latitude": 40.70331,
+        "Longitude": -74.01598,
+        "MessageID": 1,
+        "NavigationalStatus": 5,
+        "PositionAccuracy": false,
+        "Raim": false,
+        "RateOfTurn": 128,
+        "RepeatIndicator": 0,
+        "Sog": 0,
+        "Spare": 0,
+        "SpecialManoeuvreIndicator": 0,
+        "Timestamp": 41,
+        "TrueHeading": 511,
+        "UserID": 366987654,
+        "Valid": true
+      }
+    },
+    "MessageType": "PositionReport",
+    "MetaData": {
+      "MMSI": 366987654,
+      "ShipName": "STATEN FERRY",
+      "latitude": 40.70331,
+      "longitude": -74.01598,
+      "time_utc": "2026-05-13 16:00:41.000000 +0000 UTC"
+    }
+  },
+  {
+    "Message": {
+      "PositionReport": {
+        "Cog": 274.9,
+        "CommunicationState": 52104,
+        "Latitude": 40.64187,
+        "Longitude": -74.12422,
+        "MessageID": 1,
+        "NavigationalStatus": 0,
+        "PositionAccuracy": true,
+        "Raim": false,
+        "RateOfTurn": -4,
+        "RepeatIndicator": 0,
+        "Sog": 11.2,
+        "Spare": 0,
+        "SpecialManoeuvreIndicator": 0,
+        "Timestamp": 58,
+        "TrueHeading": 276,
+        "UserID": 368246810,
+        "Valid": true
+      }
+    },
+    "MessageType": "PositionReport",
+    "MetaData": {
+      "MMSI": 368246810,
+      "ShipName": "KILL VAN KULL",
+      "latitude": 40.64187,
+      "longitude": -74.12422,
+      "time_utc": "2026-05-13 16:00:58.000000 +0000 UTC"
+    }
+  }
+]

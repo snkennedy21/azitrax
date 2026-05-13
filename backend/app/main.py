@@ -7,10 +7,13 @@ from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from psycopg import Error as PsycopgError
 
+from app.ais_source import AisSourceError
+from app.ais_source import load_ais_vessel_records
 from app.database import create_pool
 from app.database import DbConnection
 from app.migrations import run_migrations
 from app.migrations import validate_migrations
+from app.schemas import AisVesselRecord
 from app.schemas import PointCreate
 from app.schemas import PointListItem
 from app.schemas import PointResponse
@@ -79,6 +82,14 @@ def health() -> dict[str, str]:
     # This endpoint only proves the HTTP server is alive.
     # It does not touch Postgres.
     return {"status": "ok"}
+
+
+@app.get("/vessels")
+async def get_vessels() -> list[AisVesselRecord]:
+    try:
+        return await load_ais_vessel_records()
+    except AisSourceError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @app.get("/health/db")
