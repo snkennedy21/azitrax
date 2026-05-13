@@ -28,19 +28,17 @@ def pytest_sessionstart(session):
     This runs once before any tests execute, ensuring the test database
     schema is up-to-date. Migrations are applied to TEST_POSTGRES_DB.
     """
-    # Use POSTGRES_HOST from main app config if available (set to 'db' in Docker),
-    # otherwise default to 127.0.0.1 for local testing
-    default_host = os.getenv("POSTGRES_HOST", "127.0.0.1")
-
-    # Set environment variables for Flyway to use test database
-    # Only override database name and optionally host - reuse credentials and port
+    # Flyway reads POSTGRES_* from flyway.conf. Build those values from the
+    # dedicated TEST_POSTGRES_* environment so test migrations cannot inherit
+    # the app's normal database target.
     test_env = os.environ.copy()
+    test_env.pop("DATABASE_URL", None)
     test_env.update({
-        "POSTGRES_HOST": os.getenv("TEST_POSTGRES_HOST", default_host),
-        "POSTGRES_PORT": os.getenv("POSTGRES_PORT", "5432"),
+        "POSTGRES_HOST": os.getenv("TEST_POSTGRES_HOST", "db"),
+        "POSTGRES_PORT": os.getenv("TEST_POSTGRES_PORT", "5432"),
         "POSTGRES_DB": os.getenv("TEST_POSTGRES_DB", "vector_test"),
-        "POSTGRES_USER": os.getenv("POSTGRES_USER", "vector"),
-        "POSTGRES_PASSWORD": os.getenv("POSTGRES_PASSWORD", "vector"),
+        "POSTGRES_USER": os.getenv("TEST_POSTGRES_USER", "vector"),
+        "POSTGRES_PASSWORD": os.getenv("TEST_POSTGRES_PASSWORD", "vector"),
     })
 
     print("\n" + "=" * 80, file=sys.stderr)
@@ -79,27 +77,20 @@ def pytest_sessionstart(session):
 def test_db_config() -> DatabaseConfig:
     """Database configuration for tests.
 
-    Reuses production database credentials and settings, but connects to
-    a separate test database (TEST_POSTGRES_DB). Optionally override host
-    with TEST_POSTGRES_HOST for local testing.
-
-    Defaults to 'db' hostname for Docker, or '127.0.0.1' for local.
+    Uses dedicated TEST_POSTGRES_* settings so tests stay isolated from the
+    app's normal database configuration.
     """
-    # Use POSTGRES_HOST from main app config if available (set to 'db' in Docker),
-    # otherwise default to 127.0.0.1 for local testing
-    default_host = os.getenv("POSTGRES_HOST", "127.0.0.1")
-
     return DatabaseConfig(
         database_url=None,  # Build from components instead
-        host=os.getenv("TEST_POSTGRES_HOST", default_host),
-        port=int(os.getenv("POSTGRES_PORT", "5432")),
+        host=os.getenv("TEST_POSTGRES_HOST", "db"),
+        port=int(os.getenv("TEST_POSTGRES_PORT", "5432")),
         dbname=os.getenv("TEST_POSTGRES_DB", "vector_test"),
-        user=os.getenv("POSTGRES_USER", "vector"),
-        password=os.getenv("POSTGRES_PASSWORD", "vector"),
-        connect_timeout=int(os.getenv("POSTGRES_CONNECT_TIMEOUT", "5")),
-        pool_min_size=int(os.getenv("POSTGRES_POOL_MIN_SIZE", "1")),
-        pool_max_size=int(os.getenv("POSTGRES_POOL_MAX_SIZE", "5")),
-        pool_timeout=float(os.getenv("POSTGRES_POOL_TIMEOUT", "5")),
+        user=os.getenv("TEST_POSTGRES_USER", "vector"),
+        password=os.getenv("TEST_POSTGRES_PASSWORD", "vector"),
+        connect_timeout=int(os.getenv("TEST_POSTGRES_CONNECT_TIMEOUT", "5")),
+        pool_min_size=int(os.getenv("TEST_POSTGRES_POOL_MIN_SIZE", "1")),
+        pool_max_size=int(os.getenv("TEST_POSTGRES_POOL_MAX_SIZE", "5")),
+        pool_timeout=float(os.getenv("TEST_POSTGRES_POOL_TIMEOUT", "5")),
     )
 
 
