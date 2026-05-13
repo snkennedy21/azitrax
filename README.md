@@ -65,6 +65,15 @@ Local defaults are documented in `.env.example`:
 - database connection timeout: `5` seconds
 - database pool size: `1` minimum, `5` maximum
 - database pool wait timeout: `5` seconds
+- AIS source mode: `fixture`
+- AIS fallback fixture path: `docs/fixtures/aisstream-position-reports-sample.json`
+- AIS fixture fallback after live-source failure: `true`
+- AISStream WebSocket URL: `wss://stream.aisstream.io/v0/stream`
+- AISStream API key: unset by default; set it for live discovery
+- AISStream bounding boxes: `[[[40.4774,-74.2591],[40.9176,-73.7004]]]`
+- AISStream message types: `PositionReport`
+- AISStream connection timeout: `10` seconds
+- AISStream discovery sample limit: `100` messages
 - frontend port: `5173`
 - backend port: `8000`
 - frontend API base URL: `/api`
@@ -109,6 +118,17 @@ Connect pgAdmin to PostGIS:
 The frontend renders an OpenLayers map, shows backend API health, lets users add
 point markers in create-point mode, and reloads persisted points from PostGIS.
 For the end-to-end browser checklist, see [docs/smoke-test.md](docs/smoke-test.md).
+
+## Source Discovery
+
+The first live external source for the next discovery phase is AIS vessel
+position data from AISStream at `wss://stream.aisstream.io/v0/stream`. Local
+development defaults to an AISStream-shaped fixture so developers can work
+without network access, credentials, or live service availability.
+
+See [docs/source-discovery.md](docs/source-discovery.md) for the source decision,
+authentication expectations, known rate-limit and availability constraints,
+payload shape, and the `fixture`/`aisstream` switch.
 
 ## Type Generation
 
