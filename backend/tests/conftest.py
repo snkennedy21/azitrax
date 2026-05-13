@@ -132,14 +132,17 @@ def client(test_db_pool: ConnectionPool) -> Iterator[TestClient]:
     """Provide a FastAPI TestClient with test database.
 
     This fixture overrides the app's database pool to use the test database.
-    The lifespan context manager is handled by TestClient automatically.
+    The test pool is opened by the test_db_pool fixture, so this client avoids
+    running the app lifespan that would create a production database pool.
     """
     # Override the db_pool in app.state to use test database
     app.state.db_pool = test_db_pool
 
-    # Create test client (handles app lifespan automatically)
-    with TestClient(app) as test_client:
+    test_client = TestClient(app)
+    try:
         yield test_client
+    finally:
+        test_client.close()
 
 
 @pytest.fixture(autouse=True)
@@ -149,8 +152,11 @@ def cleanup_database(db_connection: Connection) -> Iterator[None]:
     This fixture runs automatically for every test (autouse=True).
     It truncates all tables after each test to ensure isolation.
     """
-    yield  # Test runs here
-
-    # Cleanup after test completes
     db_connection.execute("TRUNCATE TABLE points RESTART IDENTITY CASCADE")
     db_connection.commit()
+
+    try:
+        yield  # Test runs here
+    finally:
+        db_connection.execute("TRUNCATE TABLE points RESTART IDENTITY CASCADE")
+        db_connection.commit()
