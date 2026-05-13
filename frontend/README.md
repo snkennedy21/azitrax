@@ -16,6 +16,24 @@ The container installs dependencies with `npm ci` during the image build. The
 source directory is mounted into the container for local development, while
 `node_modules` stays inside a Docker volume.
 
+## Verification
+
+Use the production build as the baseline frontend confidence check:
+
+```sh
+npm run build
+```
+
+This runs `tsc -b` before `vite build`, so TypeScript compilation must pass
+before the app bundles. Generated API types participate in this check through
+`src/services/api/type-helpers.ts`, which imports
+`src/services/api/types.generated.ts` and re-exports the public API aliases used
+by the React Query hooks.
+
+Frontend unit or component tests are intentionally deferred for now. Add a test
+runner when there is a clear target for behavior that is not already covered by
+the TypeScript build and Vite bundle checks.
+
 ## API Configuration
 
 The frontend reads `VITE_API_BASE_URL` for API requests. The default is `/api`,
