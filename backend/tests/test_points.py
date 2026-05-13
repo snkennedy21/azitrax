@@ -4,7 +4,15 @@ These tests verify the POST /points and GET /points endpoints work correctly,
 including the write-then-read flow that confirms points are persisted to PostGIS.
 """
 
+import pytest
 from fastapi.testclient import TestClient
+from psycopg import Connection
+
+
+def assert_validation_error_for_field(response, field_name: str) -> None:
+    assert response.status_code == 422
+    errors = response.json()["detail"]
+    assert any(error["loc"] == ["body", field_name] for error in errors)
 
 
 def test_create_point_with_valid_coordinates(client: TestClient) -> None:
@@ -135,44 +143,83 @@ def test_multiple_points_can_be_created_and_retrieved(client: TestClient) -> Non
         assert point["lon"] == coordinates[i]["lon"]
 
 
-def test_create_point_validates_latitude_bounds(client: TestClient) -> None:
+@pytest.mark.parametrize("lat", [-90.000001, 90.000001])
+def test_create_point_validates_latitude_bounds(
+    client: TestClient,
+    lat: float,
+) -> None:
     """Test that POST /points rejects latitude values outside valid range.
 
     Latitude must be between -90 and 90 degrees.
     """
-    # Test latitude > 90
     response = client.post(
         "/points",
-        json={"lat": 91.0, "lon": 0.0}
+        json={"lat": lat, "lon": 0.0},
     )
-    assert response.status_code == 422  # Validation error
 
-    # Test latitude < -90
-    response = client.post(
-        "/points",
-        json={"lat": -91.0, "lon": 0.0}
-    )
-    assert response.status_code == 422  # Validation error
+    assert_validation_error_for_field(response, "lat")
 
 
-def test_create_point_validates_longitude_bounds(client: TestClient) -> None:
+@pytest.mark.parametrize("lon", [-180.000001, 180.000001])
+def test_create_point_validates_longitude_bounds(
+    client: TestClient,
+    lon: float,
+) -> None:
     """Test that POST /points rejects longitude values outside valid range.
 
     Longitude must be between -180 and 180 degrees.
     """
-    # Test longitude > 180
     response = client.post(
         "/points",
-        json={"lat": 0.0, "lon": 181.0}
+        json={"lat": 0.0, "lon": lon},
     )
-    assert response.status_code == 422  # Validation error
 
-    # Test longitude < -180
-    response = client.post(
+    assert_validation_error_for_field(response, "lon")
+
+
+def test_create_point_preserves_coordinate_order_and_srid(
+    client: TestClient,
+    db_connection: Connection,
+) -> None:
+    """Guard against reversing lat/lon at the PostGIS X/Y boundary."""
+    submitted_lat = 12.345678
+    submitted_lon = -98.765432
+
+    create_response = client.post(
         "/points",
-        json={"lat": 0.0, "lon": -181.0}
+        json={"lat": submitted_lat, "lon": submitted_lon},
     )
-    assert response.status_code == 422  # Validation error
+
+    assert create_response.status_code == 201
+    created_point = create_response.json()
+    assert created_point["lat"] == pytest.approx(submitted_lat)
+    assert created_point["lon"] == pytest.approx(submitted_lon)
+    assert created_point["srid"] == 4326
+
+    stored_point = db_connection.execute(
+        """
+        SELECT
+            ST_Y(geom) AS lat,
+            ST_X(geom) AS lon,
+            ST_SRID(geom) AS srid
+        FROM points
+        WHERE id = %s
+        """,
+        (created_point["id"],),
+    ).fetchone()
+
+    assert stored_point is not None
+    assert stored_point["lat"] == pytest.approx(submitted_lat)
+    assert stored_point["lon"] == pytest.approx(submitted_lon)
+    assert stored_point["srid"] == 4326
+
+    get_response = client.get("/points")
+    assert get_response.status_code == 200
+    points = get_response.json()
+    assert len(points) == 1
+    assert points[0]["id"] == created_point["id"]
+    assert points[0]["lat"] == pytest.approx(submitted_lat)
+    assert points[0]["lon"] == pytest.approx(submitted_lon)
 
 
 def test_create_point_accepts_boundary_values(client: TestClient) -> None:
