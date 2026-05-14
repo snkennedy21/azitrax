@@ -28,8 +28,8 @@ class AisSourceConfig:
     aisstream_api_key: str | None = None
     aisstream_bounding_boxes: list[Any] | None = None
     aisstream_message_types: list[str] | None = None
-    aisstream_connect_timeout_seconds: float = 10.0
-    aisstream_sample_message_limit: int = 100
+    aisstream_connect_timeout_seconds: float = 30.0
+    aisstream_sample_message_limit: int = 5
 
     @classmethod
     def from_env(cls) -> AisSourceConfig:
@@ -41,8 +41,8 @@ class AisSourceConfig:
             aisstream_api_key=os.getenv("AISSTREAM_API_KEY") or None,
             aisstream_bounding_boxes=_parse_json_env("AISSTREAM_BOUNDING_BOXES", DEFAULT_BOUNDING_BOXES),
             aisstream_message_types=_parse_csv_env("AISSTREAM_MESSAGE_TYPES", ["PositionReport"]),
-            aisstream_connect_timeout_seconds=float(os.getenv("AISSTREAM_CONNECT_TIMEOUT_SECONDS", "10")),
-            aisstream_sample_message_limit=max(1, int(os.getenv("AISSTREAM_SAMPLE_MESSAGE_LIMIT", "100"))),
+            aisstream_connect_timeout_seconds=float(os.getenv("AISSTREAM_CONNECT_TIMEOUT_SECONDS", "30")),
+            aisstream_sample_message_limit=max(1, int(os.getenv("AISSTREAM_SAMPLE_MESSAGE_LIMIT", "5"))),
         )
 
 
@@ -110,6 +110,8 @@ class AisSourceClient:
 
     def _records_from_messages(self, messages: list[Any]) -> list[AisVesselRecord]:
         records: list[AisVesselRecord] = []
+
+        print('message: ', messages)
 
         for message in messages:
             if not isinstance(message, dict) or message.get("MessageType") != "PositionReport":
