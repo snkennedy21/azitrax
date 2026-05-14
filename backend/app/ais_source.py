@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from app.schemas import AisVesselRecord
+from app.schemas import LiveVesselMapItem
 
 
 DEFAULT_BOUNDING_BOXES = [[[40.4774, -74.2591], [40.9176, -73.7004]]]
@@ -111,8 +112,6 @@ class AisSourceClient:
     def _records_from_messages(self, messages: list[Any]) -> list[AisVesselRecord]:
         records: list[AisVesselRecord] = []
 
-        print('message: ', messages)
-
         for message in messages:
             if not isinstance(message, dict) or message.get("MessageType") != "PositionReport":
                 continue
@@ -148,6 +147,30 @@ class AisSourceClient:
 
 async def load_ais_vessel_records(config: AisSourceConfig | None = None) -> list[AisVesselRecord]:
     return await AisSourceClient(config).load_vessel_records()
+
+
+def map_live_vessel_items(records: list[AisVesselRecord]) -> list[LiveVesselMapItem]:
+    items: list[LiveVesselMapItem] = []
+
+    for record in records:
+        if not _has_valid_coordinates(record.lat, record.lon):
+            continue
+
+        items.append(
+            LiveVesselMapItem(
+                id=f"mmsi:{record.mmsi}",
+                lat=record.lat,
+                lon=record.lon,
+                timestamp=record.time_utc,
+                mmsi=record.mmsi,
+                label=record.ship_name,
+                course=record.cog,
+                heading=record.true_heading,
+                speed=record.sog,
+            )
+        )
+
+    return items
 
 
 def _default_ws_connect(url: str, open_timeout: float) -> Any:
@@ -199,6 +222,15 @@ def _resolve_path(raw_path: str | None, default: Path) -> Path:
 
 def _looks_like_source_error(message: dict[str, Any]) -> bool:
     return any(key.lower() in {"error", "errors"} for key in message)
+
+
+def _has_valid_coordinates(lat: Any, lon: Any) -> bool:
+    try:
+        numeric_lat = float(lat)
+        numeric_lon = float(lon)
+    except (TypeError, ValueError):
+        return False
+    return -90 <= numeric_lat <= 90 and -180 <= numeric_lon <= 180
 
 
 def _clean_ship_name(value: Any) -> str | None:

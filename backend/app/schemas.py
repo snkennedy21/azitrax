@@ -60,3 +60,18 @@ class AisVesselRecord(APIBaseModel):
     true_heading: int | None = Field(default=None, description="True heading")
     navigational_status: int | None = Field(default=None, description="AIS navigational status")
     position_accuracy: bool | None = Field(default=None, description="AIS position accuracy flag")
+
+
+class LiveVesselMapItem(APIBaseModel):
+    """Temporary live map render contract, not a persisted vessel domain model."""
+
+    id: str = Field(description="Stable frontend marker identifier derived from the live source")
+    lat: float = Field(ge=-90, le=90, description="Latitude coordinate (WGS84)")
+    lon: float = Field(ge=-180, le=180, description="Longitude coordinate (WGS84)")
+    timestamp: str | None = Field(default=None, description="Source timestamp for this live position")
+    mmsi: int | None = Field(default=None, description="Maritime Mobile Service Identity when available")
+    label: str | None = Field(default=None, description="Display label for the vessel marker")
+    course: float | None = Field(default=None, description="Course over ground")
+    heading: int | None = Field(default=None, description="True heading")
+    speed: float | None = Field(default=None, description="Speed over ground")
+    destination: str | None = Field(default=None, description="Reported destination when available")

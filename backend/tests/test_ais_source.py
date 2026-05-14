@@ -6,6 +6,8 @@ from fastapi.testclient import TestClient
 
 from app.ais_source import AisSourceClient
 from app.ais_source import AisSourceConfig
+from app.ais_source import map_live_vessel_items
+from app.schemas import AisVesselRecord
 
 
 def fixture_path() -> Path:
@@ -40,7 +42,11 @@ def test_vessels_endpoint_returns_fixture_records(client: TestClient, monkeypatc
     records = response.json()
     assert len(records) == 3
     assert records[0]["mmsi"] == 367123456
-    assert records[0]["shipName"] == "HARBOR PILOT"
+    assert records[0]["id"] == "mmsi:367123456"
+    assert records[0]["label"] == "HARBOR PILOT"
+    assert records[0]["timestamp"] == "2026-05-13 16:00:22.000000 +0000 UTC"
+    assert records[0]["speed"] == pytest.approx(8.7)
+    assert records[0]["course"] == pytest.approx(128.4)
 
 
 @pytest.mark.asyncio
@@ -112,6 +118,44 @@ async def test_loads_successful_aisstream_response_with_timeout_and_limit() -> N
         "BoundingBoxes": [[[1, 2], [3, 4]]],
         "FilterMessageTypes": ["PositionReport"],
     }
+
+
+def test_maps_complete_vessel_record_to_live_map_item() -> None:
+    record = AisVesselRecord(
+        mmsi=123456789,
+        ship_name="TEST VESSEL",
+        lat=40.1,
+        lon=-73.9,
+        time_utc="2026-05-13 16:01:00.000000 +0000 UTC",
+        sog=4.2,
+        cog=91.5,
+        true_heading=92,
+    )
+
+    items = map_live_vessel_items([record])
+
+    assert len(items) == 1
+    assert items[0].id == "mmsi:123456789"
+    assert items[0].lat == pytest.approx(40.1)
+    assert items[0].lon == pytest.approx(-73.9)
+    assert items[0].timestamp == "2026-05-13 16:01:00.000000 +0000 UTC"
+    assert items[0].mmsi == 123456789
+    assert items[0].label == "TEST VESSEL"
+    assert items[0].speed == pytest.approx(4.2)
+    assert items[0].course == pytest.approx(91.5)
+    assert items[0].heading == 92
+
+
+def test_skips_vessel_record_without_valid_coordinates() -> None:
+    record = AisVesselRecord.model_construct(
+        mmsi=123456789,
+        ship_name="MALFORMED",
+        lat=None,
+        lon=-73.9,
+        time_utc="2026-05-13 16:01:00.000000 +0000 UTC",
+    )
+
+    assert map_live_vessel_items([record]) == []
 
 
 class FakeWebSocket:
