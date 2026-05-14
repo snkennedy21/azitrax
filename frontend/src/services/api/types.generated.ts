@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vessels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Vessels */
+        get: operations["get_vessels_vessels_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health/db": {
         parameters: {
             query?: never;
@@ -66,9 +83,90 @@ export interface components {
             detail?: components["schemas"]["ValidationError"][];
         };
         /**
-         * PointCreate
-         * @description Request payload for creating a new geographic point.
+         * LiveVesselMapItem
+         * @description Temporary live map render contract, not a persisted vessel domain model.
          */
+        LiveVesselMapItem: {
+            /**
+             * Id
+             * @description Stable frontend marker identifier derived from the live source
+             */
+            id: string;
+            /**
+             * Lat
+             * @description Latitude coordinate (WGS84)
+             */
+            lat: number;
+            /**
+             * Lon
+             * @description Longitude coordinate (WGS84)
+             */
+            lon: number;
+            /**
+             * Timestamp
+             * @description Source timestamp for this live position
+             */
+            timestamp?: string | null;
+            /**
+             * Mmsi
+             * @description Maritime Mobile Service Identity when available
+             */
+            mmsi?: number | null;
+            /**
+             * Label
+             * @description Display label for the vessel marker
+             */
+            label?: string | null;
+            /**
+             * Course
+             * @description Course over ground
+             */
+            course?: number | null;
+            /**
+             * Heading
+             * @description True heading
+             */
+            heading?: number | null;
+            /**
+             * Speed
+             * @description Speed over ground
+             */
+            speed?: number | null;
+            /**
+             * Destination
+             * @description Reported destination when available
+             */
+            destination?: string | null;
+        };
+        /** LiveVesselsMetadata */
+        LiveVesselsMetadata: {
+            /**
+             * Source
+             * @description Configured AIS source used for the fetch
+             */
+            source: string;
+            /**
+             * Fetchedat
+             * @description API fetch completion time in UTC
+             */
+            fetchedAt: string;
+            /**
+             * Returnedcount
+             * @description Number of live vessel items returned
+             */
+            returnedCount: number;
+        };
+        /** LiveVesselsResponse */
+        LiveVesselsResponse: {
+            /**
+             * Items
+             * @description Minimal live vessel items for map rendering
+             */
+            items: components["schemas"]["LiveVesselMapItem"][];
+            /** @description Fetch metadata for poll freshness checks */
+            metadata: components["schemas"]["LiveVesselsMetadata"];
+        };
+        /** PointCreate */
         PointCreate: {
             /**
              * Lat
@@ -81,12 +179,7 @@ export interface components {
              */
             lon: number;
         };
-        /**
-         * PointListItem
-         * @description Response model for a point in list views.
-         *
-         *     Returned by GET /points. Contains minimal fields for efficient list display.
-         */
+        /** PointListItem */
         PointListItem: {
             /**
              * Id
@@ -104,12 +197,7 @@ export interface components {
              */
             lon: number;
         };
-        /**
-         * PointResponse
-         * @description Response model for a single point with full details.
-         *
-         *     Returned by POST /points after creating a new point.
-         */
+        /** PointResponse */
         PointResponse: {
             /**
              * Id
@@ -172,6 +260,26 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    get_vessels_vessels_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LiveVesselsResponse"];
                 };
             };
         };

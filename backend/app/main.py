@@ -1,5 +1,7 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import datetime
+from datetime import timezone
 import os
 
 from fastapi import FastAPI
@@ -8,13 +10,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from psycopg import Error as PsycopgError
 
 from app.ais_source import AisSourceError
+from app.ais_source import AisSourceConfig
 from app.ais_source import load_ais_vessel_records
 from app.ais_source import map_live_vessel_items
 from app.database import create_pool
 from app.database import DbConnection
 from app.migrations import run_migrations
 from app.migrations import validate_migrations
-from app.schemas import LiveVesselMapItem
+from app.schemas import LiveVesselsMetadata
+from app.schemas import LiveVesselsResponse
 from app.schemas import PointCreate
 from app.schemas import PointListItem
 from app.schemas import PointResponse
@@ -86,12 +90,22 @@ def health() -> dict[str, str]:
 
 
 @app.get("/vessels")
-async def get_vessels() -> list[LiveVesselMapItem]:
+async def get_vessels() -> LiveVesselsResponse:
     try:
-        records = await load_ais_vessel_records()
+        config = AisSourceConfig.from_env()
+        records = await load_ais_vessel_records(config)
     except AisSourceError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    return map_live_vessel_items(records)
+
+    items = map_live_vessel_items(records)
+    return LiveVesselsResponse(
+        items=items,
+        metadata=LiveVesselsMetadata(
+            source=config.source,
+            fetched_at=datetime.now(timezone.utc).isoformat(),
+            returned_count=len(items),
+        ),
+    )
 
 
 @app.get("/health/db")

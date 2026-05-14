@@ -5,6 +5,7 @@ import type {
   PointListItem,
   PointCreate,
   PointResponse,
+  LiveVesselsResponse,
 } from "./types";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -38,6 +39,15 @@ export function useGetPointsQuery() {
   return useQuery({
     queryKey: ["points"],
     queryFn: () => request<PointListItem[]>("/points"),
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
+}
+
+export function useGetVesselsQuery() {
+  return useQuery({
+    queryKey: ["vessels"],
+    queryFn: () => request<LiveVesselsResponse>("/vessels"),
     refetchOnWindowFocus: false,
     retry: 1,
   });

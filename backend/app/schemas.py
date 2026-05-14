@@ -75,3 +75,14 @@ class LiveVesselMapItem(APIBaseModel):
     heading: int | None = Field(default=None, description="True heading")
     speed: float | None = Field(default=None, description="Speed over ground")
     destination: str | None = Field(default=None, description="Reported destination when available")
+
+
+class LiveVesselsMetadata(APIBaseModel):
+    source: str = Field(description="Configured AIS source used for the fetch")
+    fetched_at: str = Field(description="API fetch completion time in UTC")
+    returned_count: int = Field(description="Number of live vessel items returned")
+
+
+class LiveVesselsResponse(APIBaseModel):
+    items: list[LiveVesselMapItem] = Field(description="Minimal live vessel items for map rendering")
+    metadata: LiveVesselsMetadata = Field(description="Fetch metadata for poll freshness checks")

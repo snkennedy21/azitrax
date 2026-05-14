@@ -11,6 +11,9 @@ export type {
   PointCreate,
   PointResponse,
   PointListItem,
+  LiveVesselMapItem,
+  LiveVesselsMetadata,
+  LiveVesselsResponse,
   HealthResponse,
   HealthDbResponse,
 } from "./type-helpers";
