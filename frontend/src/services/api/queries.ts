@@ -48,6 +48,7 @@ export function useGetVesselsQuery() {
   return useQuery({
     queryKey: ["vessels"],
     queryFn: () => request<LiveVesselsResponse>("/vessels"),
+    refetchInterval: 10000,
     refetchOnWindowFocus: false,
     retry: 1,
   });

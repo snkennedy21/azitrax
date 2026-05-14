@@ -17,17 +17,27 @@
   }
 }
 
-.apiStatus {
+.statusStack {
   position: absolute;
   right: $spacing16;
   bottom: $spacing16;
-  z-index: $zIndexApiStatus;
+  z-index: $zIndexToggleButton;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing8;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+.statusPill {
   border: 1px solid $colorDarkBorder;
   border-radius: $borderRadius8;
   background: $colorDarkBg;
   color: $colorSlate50;
   font: $fontWeight600 $fontSize13 $fontSystemUi;
   line-height: $lineHeight13;
+  max-width: min(320px, calc(100vw - #{$spacing16} * 2));
+  overflow-wrap: anywhere;
   padding: $spacing8 $spacing10;
 
   &[data-state="error"] {

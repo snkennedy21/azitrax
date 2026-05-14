@@ -8,12 +8,13 @@ import ImageTile from "ol/source/ImageTile.js";
 import VectorSource from "ol/source/Vector.js";
 import Feature from "ol/Feature.js";
 import Point from "ol/geom/Point.js";
-import { Circle as CircleStyle, Fill, Stroke, Style } from "ol/style.js";
+import { Circle as CircleStyle, Fill, RegularShape, Stroke, Style } from "ol/style.js";
 import { fromLonLat, toLonLat } from "ol/proj.js";
 import "ol/ol.css";
 import {
   useGetHealthQuery,
   useGetPointsQuery,
+  useGetVesselsQuery,
   useCreatePointMutation,
 } from "@/services/api";
 import { useMapModeStore } from "@/store/mapModeStore";
@@ -24,9 +25,16 @@ export function MapView() {
   const mapElement = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const vectorLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const vesselLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
 
   const { data: healthData, status: healthStatus } = useGetHealthQuery();
   const { data: pointsData } = useGetPointsQuery();
+  const {
+    data: vesselsData,
+    error: vesselsError,
+    isFetching: vesselsIsFetching,
+    status: vesselsStatus,
+  } = useGetVesselsQuery();
   const createPointMutation = useCreatePointMutation();
   const mode = useMapModeStore((state) => state.mode);
 
@@ -75,6 +83,22 @@ export function MapView() {
       style: vectorStyle,
     });
 
+    const vesselSource = new VectorSource();
+    const vesselStyle = new Style({
+      image: new RegularShape({
+        points: 3,
+        radius: 8,
+        rotation: Math.PI,
+        fill: new Fill({ color: "#f97316" }),
+        stroke: new Stroke({ color: "#ffffff", width: 2 }),
+      }),
+    });
+
+    const vesselLayer = new VectorLayer({
+      source: vesselSource,
+      style: vesselStyle,
+    });
+
     const tileLayer = new TileLayer({
       source: new ImageTile({
         attributions:
@@ -85,7 +109,7 @@ export function MapView() {
 
     const map = new Map({
       target: mapElement.current,
-      layers: [tileLayer, vectorLayer],
+      layers: [tileLayer, vectorLayer, vesselLayer],
       view: new View({
         center: fromLonLat([0, 20]),
         zoom: 2,
@@ -95,11 +119,13 @@ export function MapView() {
 
     mapRef.current = map;
     vectorLayerRef.current = vectorLayer;
+    vesselLayerRef.current = vesselLayer;
 
     return () => {
       map.setTarget(undefined);
       mapRef.current = null;
       vectorLayerRef.current = null;
+      vesselLayerRef.current = null;
     };
   }, []);
 
@@ -141,6 +167,46 @@ export function MapView() {
     vectorSource.addFeatures(features);
   }, [pointsData]);
 
+  // Update live vessel markers separately from saved points.
+  useEffect(() => {
+    if (!vesselLayerRef.current || !vesselsData) {
+      return;
+    }
+
+    const vesselSource = vesselLayerRef.current.getSource();
+    if (!vesselSource) {
+      return;
+    }
+
+    vesselSource.clear();
+
+    const features = vesselsData.items.map((vessel) => {
+      const feature = new Feature({
+        geometry: new Point(fromLonLat([vessel.lon, vessel.lat])),
+      });
+      feature.setId(`live-vessel:${vessel.id}`);
+      feature.setProperties({
+        label: vessel.label,
+        mmsi: vessel.mmsi,
+        timestamp: vessel.timestamp,
+      });
+      return feature;
+    });
+
+    vesselSource.addFeatures(features);
+  }, [vesselsData]);
+
+  const vesselCount = vesselsData?.metadata.returnedCount ?? 0;
+  const vesselStatusState = vesselsError ? "error" : vesselsStatus;
+  let vesselStatusText = `Vessels live (${vesselCount})`;
+  if (vesselsError instanceof Error) {
+    vesselStatusText = `Vessels error: ${vesselsError.message}`;
+  } else if (vesselsStatus === "pending") {
+    vesselStatusText = "Vessels loading";
+  } else if (vesselsIsFetching) {
+    vesselStatusText = `Vessels refreshing (${vesselCount})`;
+  }
+
   return (
     <div className={styles.mapContainer}>
       <div
@@ -150,8 +216,13 @@ export function MapView() {
         aria-label="OpenStreetMap base map"
       />
       <MapModeToggle />
-      <div className={styles.apiStatus} data-state={healthStatus}>
-        API {healthData?.status === "ok" ? "connected" : healthStatus}
+      <div className={styles.statusStack}>
+        <div className={styles.statusPill} data-state={vesselStatusState}>
+          {vesselStatusText}
+        </div>
+        <div className={styles.statusPill} data-state={healthStatus}>
+          API {healthData?.status === "ok" ? "connected" : healthStatus}
+        </div>
       </div>
     </div>
   );
