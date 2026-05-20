@@ -130,6 +130,8 @@ The shared configuration keys are listed in `.env.example`:
 - `AISSTREAM_CONNECT_TIMEOUT_SECONDS`: WebSocket connection timeout.
 - `AISSTREAM_SAMPLE_MESSAGE_LIMIT`: optional cap for discovery commands that
   only need a bounded sample.
+- `AISSTREAM_DISABLE_TLS_VERIFY`: set to `true` to disable AISStream WebSocket
+  certificate verification temporarily.
 
 These keys are discovery configuration only. They do not imply any persistence
 schema.

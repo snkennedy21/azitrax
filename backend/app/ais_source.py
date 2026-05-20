@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
+import ssl
 from typing import Any
 
 from app.schemas import AisVesselRecord
@@ -31,6 +32,7 @@ class AisSourceConfig:
     aisstream_message_types: list[str] | None = None
     aisstream_connect_timeout_seconds: float = 30.0
     aisstream_sample_message_limit: int = 5
+    aisstream_disable_tls_verify: bool = False
 
     @classmethod
     def from_env(cls) -> AisSourceConfig:
@@ -44,6 +46,7 @@ class AisSourceConfig:
             aisstream_message_types=_parse_csv_env("AISSTREAM_MESSAGE_TYPES", ["PositionReport"]),
             aisstream_connect_timeout_seconds=float(os.getenv("AISSTREAM_CONNECT_TIMEOUT_SECONDS", "30")),
             aisstream_sample_message_limit=max(1, int(os.getenv("AISSTREAM_SAMPLE_MESSAGE_LIMIT", "5"))),
+            aisstream_disable_tls_verify=_parse_aisstream_disable_tls_verify(),
         )
 
 
@@ -95,9 +98,12 @@ class AisSourceClient:
 
         records: list[AisVesselRecord] = []
         timeout = self.config.aisstream_connect_timeout_seconds
+        connect_kwargs: dict[str, Any] = {"open_timeout": timeout}
+        if self.config.aisstream_disable_tls_verify:
+            connect_kwargs["ssl"] = ssl._create_unverified_context()
 
         async with asyncio.timeout(timeout):
-            async with self._ws_connect(self.config.aisstream_ws_url, open_timeout=timeout) as websocket:
+            async with self._ws_connect(self.config.aisstream_ws_url, **connect_kwargs) as websocket:
                 await websocket.send(json.dumps(subscription))
 
                 while len(records) < self.config.aisstream_sample_message_limit:
@@ -173,17 +179,21 @@ def map_live_vessel_items(records: list[AisVesselRecord]) -> list[LiveVesselMapI
     return items
 
 
-def _default_ws_connect(url: str, open_timeout: float) -> Any:
+def _default_ws_connect(url: str, open_timeout: float, **kwargs: Any) -> Any:
     try:
         import websockets
     except ImportError as exc:
         raise AisSourceError("websockets is required for AIS_SOURCE=aisstream") from exc
 
-    return websockets.connect(url, open_timeout=open_timeout)
+    return websockets.connect(url, open_timeout=open_timeout, **kwargs)
 
 
 def _parse_bool(value: str) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _parse_aisstream_disable_tls_verify() -> bool:
+    return _parse_bool(os.getenv("AISSTREAM_DISABLE_TLS_VERIFY", "false"))
 
 
 def _parse_csv_env(name: str, default: list[str]) -> list[str]:

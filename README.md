@@ -74,6 +74,7 @@ Local defaults are documented in `.env.example`:
 - AISStream message types: `PositionReport`
 - AISStream connection timeout: `10` seconds
 - AISStream discovery sample limit: `100` messages
+- AISStream TLS verification disabled: `false`
 - frontend port: `5173`
 - backend port: `8000`
 - frontend API base URL: `/api`
