@@ -46,8 +46,9 @@ Set up AISStream:
 4. Create a new API token
 5. Add the token to `.env`
 
+Replace This With Your Personal API Key (Don't commit this)
 ```sh
-AISSTREAM_API_KEY=<AISSTREAM_API_KEY>    <----- Replace This With Your Key
+AISSTREAM_API_KEY=<AISSTREAM_API_KEY>
 ```
 
 Start the app:
