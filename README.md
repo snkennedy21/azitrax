@@ -1,10 +1,6 @@
 # Vector
 
-Minimal geospatial app exploring the smallest useful loop:
-
-UI -> API -> DB -> API -> UI
-
-The Phase 0 goal is for a user to open a map, click to save a point, and see persisted points rendered from PostGIS.
+It's a geospatial app that pulls in AIS from a 3rd party source and renders it using Open Layers
 
 ## Table of Contents
 
@@ -66,10 +62,22 @@ Client: `http://127.0.0.1:5173` <br>
 API: `http://127.0.0.1:8000` <br>
 PG Admin: `http://127.0.0.1:5050` <br>
 
-To stop everything:
+### To stop everything:
 
 ```sh
 docker compose down
+```
+
+### Note
+
+By default, the application renders data from the AIS data source.
+
+In the event that the AIS data source is down, offline development can be done by switching to local fixtures in you `.env` file
+
+```
+AIS_SOURCE=fixture
+AIS_FIXTURE_PATH=/app/app/fixtures/aisstream-position-reports-sample.json
+AIS_ALLOW_FIXTURE_FALLBACK=true
 ```
 
 ## Project Layout
