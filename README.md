@@ -6,6 +6,58 @@ UI -> API -> DB -> API -> UI
 
 The Phase 0 goal is for a user to open a map, click to save a point, and see persisted points rendered from PostGIS.
 
+## Table of Contents
+
+- [Getting Started](#getting-started)
+- [Project Layout](#project-layout)
+- [Local Services](#local-services)
+- [Source Discovery](#source-discovery)
+- [Type Generation](#type-generation)
+  - [Regenerating Types](#regenerating-types)
+  - [Type Generation Architecture](#type-generation-architecture)
+  - [Troubleshooting](#troubleshooting)
+
+## Getting Started
+
+Prerequisite: Docker Desktop.
+
+Clone the repo and create your local environment file:
+
+```sh
+git clone <repo-url>
+cd vector
+cp .env.example .env
+```
+
+Set up AISStream:
+
+1. Go to `https://aisstream.io/`.
+2. Click `Get Started`.
+3. Create an account by linking your GitHub account.
+4. Create a new API token.
+5. Add the token to `.env`:
+
+```sh
+AISSTREAM_API_KEY=<AISSTREAM_API_KEY>
+```
+
+Start the app:
+
+```sh
+docker compose up -d
+```
+
+Open `http://127.0.0.1:5173`.
+
+That starts the React frontend, FastAPI backend, PostGIS database, and pgAdmin
+with local defaults.
+
+To stop everything:
+
+```sh
+docker compose down
+```
+
 ## Project Layout
 
 - `frontend/`: React app that renders the map, handles map clicks, calls the backend API, and draws saved points.
