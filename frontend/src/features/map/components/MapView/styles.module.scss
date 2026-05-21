@@ -40,7 +40,46 @@
   overflow-wrap: anywhere;
   padding: $spacing8 $spacing10;
 
+  &[data-loading="true"] {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing8;
+  }
+
+  &[data-loading="true"]::before {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f97316;
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4);
+    content: "";
+    flex: 0 0 auto;
+    animation: vesselStatusBeacon 1.5s ease-out infinite;
+  }
+
   &[data-state="error"] {
     background: $colorErrorBg;
+  }
+}
+
+@keyframes vesselStatusBeacon {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4);
+    opacity: 0.76;
+    transform: scale(0.92);
+  }
+
+  50% {
+    box-shadow: 0 0 0 7px rgba(249, 115, 22, 0);
+    opacity: 1;
+    transform: scale(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .statusPill[data-loading="true"]::before {
+    animation: none;
+    opacity: 1;
   }
 }
