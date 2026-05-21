@@ -13,6 +13,7 @@ renders it on an OpenLayers map.
 - [Type Generation](#type-generation)
   - [Regenerating Types](#regenerating-types)
   - [Type Generation Architecture](#type-generation-architecture)
+- [Running Tests](#running-tests)
 
 ## Getting Started
 
@@ -148,3 +149,11 @@ When you modify Pydantic models or API endpoints in the backend:
 - **Generated Types**: [frontend/src/services/api/types.generated.ts](frontend/src/services/api/types.generated.ts) (do not edit manually)
 - **Type Helpers**: [frontend/src/services/api/type-helpers.ts](frontend/src/services/api/type-helpers.ts) (clean type aliases)
 - **Public API**: [frontend/src/services/api/types.ts](frontend/src/services/api/types.ts) (re-exports for components)
+
+## Running Tests
+
+Backend Test Suite
+
+```sh
+docker compose exec backend pytest
+```
