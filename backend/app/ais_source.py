@@ -31,7 +31,7 @@ class AisSourceConfig:
     aisstream_bounding_boxes: list[Any] | None = None
     aisstream_message_types: list[str] | None = None
     aisstream_connect_timeout_seconds: float = 30.0
-    aisstream_sample_message_limit: int = 5
+    aisstream_sample_message_limit: int = 50
     aisstream_disable_tls_verify: bool = False
 
     @classmethod
@@ -45,7 +45,7 @@ class AisSourceConfig:
             aisstream_bounding_boxes=_parse_json_env("AISSTREAM_BOUNDING_BOXES", DEFAULT_BOUNDING_BOXES),
             aisstream_message_types=_parse_csv_env("AISSTREAM_MESSAGE_TYPES", ["PositionReport"]),
             aisstream_connect_timeout_seconds=float(os.getenv("AISSTREAM_CONNECT_TIMEOUT_SECONDS", "30")),
-            aisstream_sample_message_limit=max(1, int(os.getenv("AISSTREAM_SAMPLE_MESSAGE_LIMIT", "5"))),
+            aisstream_sample_message_limit=max(1, int(os.getenv("AISSTREAM_SAMPLE_MESSAGE_LIMIT", "50"))),
             aisstream_disable_tls_verify=_parse_aisstream_disable_tls_verify(),
         )
 

@@ -198,6 +198,7 @@ export function MapView() {
 
   const vesselCount = vesselsData?.metadata.returnedCount ?? 0;
   const vesselStatusState = vesselsError ? "error" : vesselsStatus;
+  const vesselsAreLoading = !vesselsError && (vesselsStatus === "pending" || vesselsIsFetching);
   let vesselStatusText = `Vessels live (${vesselCount})`;
   if (vesselsError instanceof Error) {
     vesselStatusText = `Vessels error: ${vesselsError.message}`;
@@ -217,7 +218,11 @@ export function MapView() {
       />
       <MapModeToggle />
       <div className={styles.statusStack}>
-        <div className={styles.statusPill} data-state={vesselStatusState}>
+        <div
+          className={styles.statusPill}
+          data-loading={vesselsAreLoading}
+          data-state={vesselStatusState}
+        >
           {vesselStatusText}
         </div>
         <div className={styles.statusPill} data-state={healthStatus}>
