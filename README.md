@@ -1,7 +1,7 @@
 # Vector
 
 Vector is a geospatial app that pulls AIS vessel data from AISStream and
-renders it on an OpenLayers map. test
+renders it on an OpenLayers map.
 
 ## Table of Contents
 
