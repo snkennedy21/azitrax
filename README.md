@@ -49,6 +49,7 @@ Open the app:
 
 - Client: `http://127.0.0.1:5173`
 - API: `http://127.0.0.1:8000`
+- Redis: `127.0.0.1:6379` locally, `redis:6379` inside Compose
 - pgAdmin: `http://127.0.0.1:5050`
 
 To stop everything:
@@ -69,7 +70,7 @@ AIS_ALLOW_FIXTURE_FALLBACK=true
 
 - `frontend/`: React app that renders the map, handles map clicks, calls the backend API, and draws saved points.
 - `backend/`: FastAPI app that exposes point endpoints, runs SQL, and communicates with Postgres/PostGIS.
-- `compose.yaml`: Local frontend, backend, Postgres/PostGIS, and pgAdmin service configuration for development.
+- `compose.yaml`: Local frontend, backend, Postgres/PostGIS, Redis, and pgAdmin service configuration for development.
 - `docs/smoke-test.md`: Manual browser smoke test for the Phase 0 map workflow.
 - `minimal_geospatial_design.md`: Phase 0 design and architecture notes.
 - `github_issues_phase_0.md`: Initial GitHub issue backlog derived from the Phase 0 design.
@@ -93,6 +94,16 @@ Verify the backend can connect to Postgres/PostGIS:
 ```sh
 curl http://127.0.0.1:8000/health/db
 ```
+
+Verify the backend can connect to Redis:
+
+```sh
+curl http://127.0.0.1:8000/health/redis
+```
+
+The local Redis service is named `redis` in Docker Compose. It exposes port
+`6379` by default and the backend reads `REDIS_URL`, which defaults in Compose
+to `redis://redis:6379/0`.
 
 ## Connecting to pgAdmin
 

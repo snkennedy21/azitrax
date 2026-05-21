@@ -22,6 +22,14 @@ from app.database import create_pool, DatabaseConfig
 from app.main import app
 
 
+class FakeRedisClient:
+    def ping(self) -> bool:
+        return True
+
+    def close(self) -> None:
+        return None
+
+
 def pytest_sessionstart(session):
     """Run database migrations before test session starts.
 
@@ -128,6 +136,7 @@ def client(test_db_pool: ConnectionPool) -> Iterator[TestClient]:
     """
     # Override the db_pool in app.state to use test database
     app.state.db_pool = test_db_pool
+    app.state.redis_client = FakeRedisClient()
 
     test_client = TestClient(app)
     try:

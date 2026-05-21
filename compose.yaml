@@ -27,6 +27,7 @@ services:
       POSTGRES_POOL_MIN_SIZE: ${POSTGRES_POOL_MIN_SIZE:-1}
       POSTGRES_POOL_MAX_SIZE: ${POSTGRES_POOL_MAX_SIZE:-5}
       POSTGRES_POOL_TIMEOUT: ${POSTGRES_POOL_TIMEOUT:-5}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       TEST_POSTGRES_HOST: ${TEST_POSTGRES_HOST:-db}
       TEST_POSTGRES_PORT: ${TEST_POSTGRES_PORT:-5432}
       TEST_POSTGRES_DB: ${TEST_POSTGRES_DB:-vector_test}
@@ -55,6 +56,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -80,6 +83,16 @@ services:
       - ./db-init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 12

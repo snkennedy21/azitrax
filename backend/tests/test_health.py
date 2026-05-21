@@ -5,6 +5,9 @@ They serve as smoke tests to ensure the basic infrastructure is functioning.
 """
 
 from fastapi.testclient import TestClient
+from redis.exceptions import ConnectionError as RedisConnectionError
+
+from app.main import app
 
 
 def test_health_endpoint_returns_ok(client: TestClient) -> None:
@@ -47,3 +50,29 @@ def test_database_health_uses_test_database(client: TestClient, db_connection) -
 
     # Should be vector_test, not vector
     assert db_name == "vector_test", f"Tests are running against wrong database: {db_name}"
+
+
+def test_redis_health_endpoint_returns_ok(client: TestClient) -> None:
+    """Test that /health/redis endpoint verifies Redis connectivity."""
+    response = client.get("/health/redis")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_redis_health_endpoint_returns_503_when_unavailable(client: TestClient) -> None:
+    """Test that /health/redis returns 503 when Redis ping fails."""
+
+    class UnavailableRedisClient:
+        def ping(self) -> bool:
+            raise RedisConnectionError("connection refused")
+
+    previous_client = app.state.redis_client
+    app.state.redis_client = UnavailableRedisClient()
+    try:
+        response = client.get("/health/redis")
+    finally:
+        app.state.redis_client = previous_client
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "redis unavailable"}

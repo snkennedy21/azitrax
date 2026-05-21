@@ -13,6 +13,9 @@ from app.ais_source import AisSourceError
 from app.ais_source import AisSourceConfig
 from app.ais_source import load_ais_vessel_records
 from app.ais_source import map_live_vessel_items
+from app.cache import check_redis_connection
+from app.cache import create_redis_client
+from app.cache import RedisClient
 from app.database import create_pool
 from app.database import DbConnection
 from app.migrations import run_migrations
@@ -51,12 +54,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # app.state is FastAPI's place for storing process-wide objects. Later,
     # the database dependency reads this same pool from request.app.state.
     app.state.db_pool = db_pool
+    app.state.redis_client = create_redis_client()
 
     try:
         # yield hands control back to FastAPI. The app serves requests until
         # shutdown, then execution continues in the finally block below.
         yield
     finally:
+        app.state.redis_client.close()
         # Close all pooled database connections when the backend process exits.
         db_pool.close()
 
@@ -128,6 +133,12 @@ def database_health(db: DbConnection) -> dict[str, str]:
 
     # Rows come back dict-like because database.py configured row_factory=dict_row.
     return {"status": "ok", "postgis_version": row["postgis_version"]}
+
+
+@app.get("/health/redis")
+def redis_health(redis_client: RedisClient) -> dict[str, str]:
+    check_redis_connection(redis_client)
+    return {"status": "ok"}
 
 
 @app.post("/points", status_code=201)
