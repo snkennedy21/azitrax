@@ -1,12 +1,14 @@
 # Vector
 
-It's a geospatial app that pulls in AIS from a 3rd party source and renders it using Open Layers
+Vector is a geospatial app that pulls AIS vessel data from AISStream and
+renders it on an OpenLayers map.
 
 ## Table of Contents
 
 - [Getting Started](#getting-started)
 - [Project Layout](#project-layout)
-- [Local Services](#local-services)
+- [Health Checks](#health-checks)
+- [Connecting to pgAdmin](#connecting-to-pgadmin)
 - [Source Discovery](#source-discovery)
 - [Type Generation](#type-generation)
   - [Regenerating Types](#regenerating-types)
@@ -14,68 +16,49 @@ It's a geospatial app that pulls in AIS from a 3rd party source and renders it u
 
 ## Getting Started
 
-### Prerequisite
+Prerequisite: Docker Desktop installed and running.
 
-- Docker Desktop Installed and Running on your Computer
-
-### Steps To Follow
-
-Clone the repo
+Clone the repo and create your local `.env` file:
 
 ```sh
-git clone <repo-url>
-```
-
-Navigate to the repo
-
-```sh
+git clone git@github.com:snkennedy21/vector.git
 cd vector
-```
-
-Copy the .env.example file
-
-```sh
 cp .env.example .env
 ```
 
-Set up AISStream:
+Create an AISStream API token:
 
-1. Go to `https://aisstream.io/`
-2. Click `Get Started`
-3. Create an account by linking your GitHub account
-4. Create a new API token
-5. Add the token to `.env`
+1. Go to [aisstream.io](https://aisstream.io/).
+2. Click `Get Started`.
+3. Create an account by linking your GitHub account.
+4. Create a new API token.
+5. Replace the placeholder API key in `.env`:
 
-Replace This With Your Personal API Key (Don't commit this)
 ```sh
 AISSTREAM_API_KEY=<AISSTREAM_API_KEY>
 ```
 
-Start the app:
+Start everything:
 
 ```sh
 docker compose up -d
 ```
 
-### Accessing the App
+Open the app:
 
-Client: `http://127.0.0.1:5173` <br>
-API: `http://127.0.0.1:8000` <br>
-PG Admin: `http://127.0.0.1:5050` <br>
+- Client: `http://127.0.0.1:5173`
+- API: `http://127.0.0.1:8000`
+- pgAdmin: `http://127.0.0.1:5050`
 
-### To stop everything:
+To stop everything:
 
 ```sh
 docker compose down
 ```
 
-### Note
+For offline development, switch `.env` to the local AIS fixture:
 
-By default, the application renders data from the AIS data source.
-
-In the event that the AIS data source is down, offline development can be done by switching to local fixtures in you `.env` file
-
-```
+```sh
 AIS_SOURCE=fixture
 AIS_FIXTURE_PATH=/app/app/fixtures/aisstream-position-reports-sample.json
 AIS_ALLOW_FIXTURE_FALLBACK=true
@@ -110,7 +93,7 @@ Verify the backend can connect to Postgres/PostGIS:
 curl http://127.0.0.1:8000/health/db
 ```
 
-## Connecting to PG Admin
+## Connecting to pgAdmin
 
 1. Open `http://127.0.0.1:5050`.
 2. Sign in with email `admin@example.com` and password `vector`.
@@ -126,10 +109,9 @@ curl http://127.0.0.1:8000/health/db
 
 ## Source Discovery
 
-The first live external source for the next discovery phase is AIS vessel
-position data from AISStream at `wss://stream.aisstream.io/v0/stream`. Local
-development defaults to an AISStream-shaped fixture so developers can work
-without network access, credentials, or live service availability.
+The live external source is AIS vessel position data from AISStream at
+`wss://stream.aisstream.io/v0/stream`. For offline development, switch
+`AIS_SOURCE` to `fixture` in `.env`.
 
 See [docs/source-discovery.md](docs/source-discovery.md) for the source decision,
 authentication expectations, known rate-limit and availability constraints,
