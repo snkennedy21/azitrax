@@ -77,6 +77,30 @@ class LiveVesselMapItem(APIBaseModel):
     destination: str | None = Field(default=None, description="Reported destination when available")
 
 
+class CachedLiveVessel(APIBaseModel):
+    """Live Redis vessel snapshot contract, not durable vessel persistence."""
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        alias_generator=to_camel,
+        allow_inf_nan=False,
+    )
+
+    id: str = Field(description="Stable frontend marker identifier derived from the live source")
+    mmsi: int = Field(description="Maritime Mobile Service Identity")
+    lat: float = Field(ge=-90, le=90, description="Latitude coordinate (WGS84)")
+    lon: float = Field(ge=-180, le=180, description="Longitude coordinate (WGS84)")
+    timestamp: str | None = Field(default=None, description="Source timestamp for this live position")
+    label: str | None = Field(default=None, description="Display label for the vessel marker")
+    course: float | None = Field(default=None, description="Course over ground")
+    heading: int | None = Field(default=None, description="True heading")
+    speed: float | None = Field(default=None, description="Speed over ground")
+    destination: str | None = Field(default=None, description="Reported destination when available")
+    first_seen_at: str = Field(description="UTC time this vessel first entered the live Redis snapshot")
+    last_seen_at: str = Field(description="UTC time this vessel snapshot was last refreshed")
+    last_message_at: str = Field(description="UTC source message time used for freshness checks")
+
+
 class LiveVesselsMetadata(APIBaseModel):
     source: str = Field(description="Configured AIS source used for the fetch")
     fetched_at: str = Field(description="API fetch completion time in UTC")

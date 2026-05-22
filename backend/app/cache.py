@@ -9,6 +9,16 @@ from fastapi import Request
 from redis import Redis
 from redis.exceptions import RedisError
 
+from app.schemas import CachedLiveVessel
+
+
+# Live Redis snapshot contract only. These keys are not durable persistence and
+# should not be treated as the historical vessel storage model.
+# - vessel:{mmsi}: JSON CachedLiveVessel payload for the vessel's latest state.
+# - live:vessels: index of MMSIs currently present in the live snapshot.
+LIVE_VESSELS_INDEX_KEY = "live:vessels"
+LIVE_VESSEL_KEY_PATTERN = "vessel:{mmsi}"
+
 
 @dataclass(frozen=True)
 class RedisConfig:
@@ -42,6 +52,18 @@ def check_redis_connection(client: Any) -> None:
         client.ping()
     except RedisError as exc:
         raise HTTPException(status_code=503, detail="redis unavailable") from exc
+
+
+def live_vessel_key(mmsi: int) -> str:
+    return LIVE_VESSEL_KEY_PATTERN.format(mmsi=mmsi)
+
+
+def serialize_cached_live_vessel(vessel: CachedLiveVessel) -> str:
+    return vessel.model_dump_json(by_alias=True)
+
+
+def deserialize_cached_live_vessel(payload: str | bytes) -> CachedLiveVessel:
+    return CachedLiveVessel.model_validate_json(payload)
 
 
 RedisClient = Annotated[Redis, Depends(get_redis_client)]
