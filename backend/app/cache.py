@@ -16,6 +16,8 @@ from app.schemas import CachedLiveVessel
 # should not be treated as the historical vessel storage model.
 # - vessel:{mmsi}: JSON CachedLiveVessel payload for the vessel's latest state.
 # - live:vessels: index of MMSIs currently present in the live snapshot.
+# - live:ais:status: JSON source/consumer status metadata for the live snapshot.
+LIVE_AIS_STATUS_KEY = "live:ais:status"
 LIVE_VESSELS_INDEX_KEY = "live:vessels"
 LIVE_VESSEL_KEY_PATTERN = "vessel:{mmsi}"
 
