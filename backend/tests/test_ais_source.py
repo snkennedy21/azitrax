@@ -1,9 +1,7 @@
 import json
-from datetime import datetime
 from pathlib import Path
 
 import pytest
-from fastapi.testclient import TestClient
 
 from app.ais_source import AisSourceClient
 from app.ais_source import AisSourceConfig
@@ -31,41 +29,6 @@ async def test_loads_vessel_records_from_fixture_without_network() -> None:
     assert records[0].lat == pytest.approx(40.67472)
     assert records[0].lon == pytest.approx(-74.04514)
     assert records[0].sog == pytest.approx(8.7)
-
-
-def test_vessels_endpoint_returns_items_and_metadata(
-    client: TestClient,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("AIS_SOURCE", "fixture")
-    monkeypatch.setenv("AIS_FIXTURE_PATH", str(fixture_path()))
-
-    response = client.get("/vessels")
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert len(payload["items"]) == 3
-    assert payload["items"][0]["mmsi"] == 367123456
-    assert payload["items"][0]["id"] == "mmsi:367123456"
-    assert payload["items"][0]["label"] == "HARBOR PILOT"
-    assert payload["items"][0]["timestamp"] == "2026-05-13 16:00:22.000000 +0000 UTC"
-    assert payload["items"][0]["speed"] == pytest.approx(8.7)
-    assert payload["items"][0]["course"] == pytest.approx(128.4)
-    assert payload["metadata"]["source"] == "fixture"
-    assert payload["metadata"]["returnedCount"] == 3
-    assert datetime.fromisoformat(payload["metadata"]["fetchedAt"])
-
-
-def test_vessels_endpoint_returns_503_when_source_unavailable(
-    client: TestClient,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("AIS_SOURCE", "unavailable")
-
-    response = client.get("/vessels")
-
-    assert response.status_code == 503
-    assert response.json() == {"detail": "unsupported AIS_SOURCE: unavailable"}
 
 
 @pytest.mark.asyncio

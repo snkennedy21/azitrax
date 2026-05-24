@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Shared pytest fixtures for FastAPI testing.
 
 This module provides fixtures for:
@@ -23,11 +25,30 @@ from app.main import app
 
 
 class FakeRedisClient:
+    def __init__(self) -> None:
+        self.values: dict[str, str] = {}
+        self.sets: dict[str, set[object]] = {}
+
     def ping(self) -> bool:
         return True
 
     def close(self) -> None:
         return None
+
+    def get(self, key: str) -> str | None:
+        return self.values.get(key)
+
+    def set(self, key: str, value: str) -> None:
+        self.values[key] = value
+
+    def mget(self, keys: list[str]) -> list[str | None]:
+        return [self.values.get(key) for key in keys]
+
+    def smembers(self, key: str) -> set[object]:
+        return self.sets.get(key, set())
+
+    def sadd(self, key: str, *values: object) -> None:
+        self.sets.setdefault(key, set()).update(values)
 
 
 def pytest_sessionstart(session):

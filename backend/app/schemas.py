@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -102,9 +104,14 @@ class CachedLiveVessel(APIBaseModel):
 
 
 class LiveVesselsMetadata(APIBaseModel):
-    source: str = Field(description="Configured AIS source used for the fetch")
-    fetched_at: str = Field(description="API fetch completion time in UTC")
+    source: str = Field(description="Configured AIS source for the live snapshot")
+    fetched_at: str = Field(description="API snapshot read completion time in UTC")
+    known_count: int = Field(description="Number of vessel IDs known in the live Redis snapshot")
     returned_count: int = Field(description="Number of live vessel items returned")
+    last_message_at: str | None = Field(default=None, description="Newest source message time in returned items")
+    oldest_last_seen_at: str | None = Field(default=None, description="Oldest cache refresh time in returned items")
+    source_status: dict[str, Any] = Field(description="Latest live source status reported by the consumer")
+    bounding_boxes: list[Any] = Field(description="AIS source bounding boxes configured for the live snapshot")
 
 
 class LiveVesselsResponse(APIBaseModel):

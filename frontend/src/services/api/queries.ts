@@ -47,7 +47,7 @@ export function useGetPointsQuery() {
 export function useGetVesselsQuery() {
   return useQuery({
     queryKey: ["vessels"],
-    queryFn: () => request<LiveVesselsResponse>("/vessels"),
+    queryFn: () => request<LiveVesselsResponse>("/live/vessels"),
     refetchInterval: 10000,
     refetchOnWindowFocus: false,
     retry: 1,

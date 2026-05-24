@@ -21,15 +21,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/vessels": {
+    "/live/vessels": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get Vessels */
-        get: operations["get_vessels_vessels_get"];
+        /** Get Live Vessels */
+        get: operations["get_live_vessels_live_vessels_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -142,19 +142,46 @@ export interface components {
         LiveVesselsMetadata: {
             /**
              * Source
-             * @description Configured AIS source used for the fetch
+             * @description Configured AIS source for the live snapshot
              */
             source: string;
             /**
              * Fetchedat
-             * @description API fetch completion time in UTC
+             * @description API snapshot read completion time in UTC
              */
             fetchedAt: string;
+            /**
+             * Knowncount
+             * @description Number of vessel IDs known in the live Redis snapshot
+             */
+            knownCount: number;
             /**
              * Returnedcount
              * @description Number of live vessel items returned
              */
             returnedCount: number;
+            /**
+             * Lastmessageat
+             * @description Newest source message time in returned items
+             */
+            lastMessageAt?: string | null;
+            /**
+             * Oldestlastseenat
+             * @description Oldest cache refresh time in returned items
+             */
+            oldestLastSeenAt?: string | null;
+            /**
+             * Sourcestatus
+             * @description Latest live source status reported by the consumer
+             */
+            sourceStatus: {
+                [key: string]: unknown;
+            };
+            /**
+             * Boundingboxes
+             * @description AIS source bounding boxes configured for the live snapshot
+             */
+            boundingBoxes: unknown[];
         };
         /** LiveVesselsResponse */
         LiveVesselsResponse: {
@@ -264,7 +291,7 @@ export interface operations {
             };
         };
     };
-    get_vessels_vessels_get: {
+    get_live_vessels_live_vessels_get: {
         parameters: {
             query?: never;
             header?: never;
