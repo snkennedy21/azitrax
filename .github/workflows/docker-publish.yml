@@ -22,10 +22,8 @@ jobs:
         image:
           - name: backend
             context: ./backend
-            dockerfile: ./backend/Dockerfile
           - name: frontend
             context: ./frontend
-            dockerfile: ./frontend/Dockerfile.prod
 
     steps:
       - name: Checkout repository
@@ -53,7 +51,6 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.image.context }}
-          file: ${{ matrix.image.dockerfile }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
