@@ -17,6 +17,7 @@ from app.ais_source import load_ais_vessel_records
 from app.cache import create_redis_client
 from app.cache import deserialize_cached_live_vessel
 from app.cache import LIVE_AIS_STATUS_KEY
+from app.cache import LIVE_VESSEL_EXPIRE_AFTER_SECONDS
 from app.cache import LIVE_VESSELS_INDEX_KEY
 from app.cache import live_vessel_key
 from app.cache import serialize_cached_live_vessel
@@ -193,7 +194,11 @@ def upsert_live_vessel_records(
         if vessel is None:
             continue
 
-        redis_client.set(live_vessel_key(vessel.mmsi), serialize_cached_live_vessel(vessel))
+        redis_client.set(
+            live_vessel_key(vessel.mmsi),
+            serialize_cached_live_vessel(vessel),
+            ex=LIVE_VESSEL_EXPIRE_AFTER_SECONDS,
+        )
         redis_client.sadd(LIVE_VESSELS_INDEX_KEY, vessel.mmsi)
         written_count += 1
 

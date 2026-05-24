@@ -5,6 +5,8 @@ from pydantic import ValidationError
 
 from app.cache import LIVE_VESSELS_INDEX_KEY
 from app.cache import LIVE_AIS_STATUS_KEY
+from app.cache import LIVE_VESSEL_EXPIRE_AFTER_SECONDS
+from app.cache import LIVE_VESSEL_STALE_AFTER_SECONDS
 from app.cache import deserialize_cached_live_vessel
 from app.cache import live_vessel_key
 from app.cache import serialize_cached_live_vessel
@@ -33,6 +35,8 @@ def test_live_vessel_cache_keys_are_documented_contract() -> None:
     assert live_vessel_key(123456789) == "vessel:123456789"
     assert LIVE_VESSELS_INDEX_KEY == "live:vessels"
     assert LIVE_AIS_STATUS_KEY == "live:ais:status"
+    assert LIVE_VESSEL_STALE_AFTER_SECONDS == 5 * 60
+    assert LIVE_VESSEL_EXPIRE_AFTER_SECONDS == 30 * 60
 
 
 def test_valid_cached_vessel_payload_round_trips_as_normalized_json() -> None:

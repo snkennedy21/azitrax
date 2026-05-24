@@ -1,4 +1,5 @@
 from typing import Any
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -71,6 +72,14 @@ class LiveVesselMapItem(APIBaseModel):
     lat: float = Field(ge=-90, le=90, description="Latitude coordinate (WGS84)")
     lon: float = Field(ge=-180, le=180, description="Longitude coordinate (WGS84)")
     timestamp: str | None = Field(default=None, description="Source timestamp for this live position")
+    last_seen_at: str | None = Field(
+        default=None,
+        description="UTC time this vessel snapshot was last refreshed",
+    )
+    freshness: Literal["fresh", "stale"] | None = Field(
+        default=None,
+        description="Freshness state derived from lastSeenAt",
+    )
     mmsi: int | None = Field(default=None, description="Maritime Mobile Service Identity when available")
     label: str | None = Field(default=None, description="Display label for the vessel marker")
     course: float | None = Field(default=None, description="Course over ground")

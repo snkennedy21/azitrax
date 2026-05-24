@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from datetime import timedelta
 from datetime import timezone
 
 import pytest
@@ -9,6 +10,7 @@ from redis.exceptions import ConnectionError as RedisConnectionError
 from app.ais_consumer import upsert_live_vessel_records
 from app.cache import LIVE_AIS_STATUS_KEY
 from app.cache import LIVE_VESSELS_INDEX_KEY
+from app.cache import live_vessel_key
 from app.main import app
 from app.schemas import AisVesselRecord
 
@@ -59,6 +61,8 @@ def test_live_vessels_endpoint_reads_populated_redis_snapshot(
             "lat": 40.1,
             "lon": -73.9,
             "timestamp": "2026-05-13T16:01:00+00:00",
+            "lastSeenAt": "2026-05-13T16:02:00+00:00",
+            "freshness": "stale",
             "mmsi": 123456789,
             "label": "TEST VESSEL",
             "course": 91.5,
@@ -128,6 +132,83 @@ def test_live_vessels_endpoint_tolerates_partial_snapshot(client: TestClient) ->
     assert payload["items"] == []
     assert payload["metadata"]["knownCount"] == 1
     assert payload["metadata"]["returnedCount"] == 0
+    assert redis_client.sets[LIVE_VESSELS_INDEX_KEY] == set()
+
+
+def test_live_vessels_endpoint_marks_fresh_vessel(client: TestClient) -> None:
+    redis_client = app.state.redis_client
+    observed_at = datetime.now(timezone.utc)
+    upsert_live_vessel_records(
+        redis_client,
+        [
+            AisVesselRecord(
+                mmsi=123456789,
+                ship_name="FRESH VESSEL",
+                lat=40.1,
+                lon=-73.9,
+                time_utc=observed_at.isoformat(),
+            )
+        ],
+        observed_at=observed_at,
+    )
+
+    response = client.get("/live/vessels")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["items"][0]["freshness"] == "fresh"
+    assert payload["items"][0]["lastSeenAt"] == observed_at.isoformat()
+
+
+def test_live_vessels_endpoint_marks_stale_vessel(client: TestClient) -> None:
+    redis_client = app.state.redis_client
+    observed_at = datetime.now(timezone.utc) - timedelta(minutes=6)
+    upsert_live_vessel_records(
+        redis_client,
+        [
+            AisVesselRecord(
+                mmsi=123456789,
+                ship_name="STALE VESSEL",
+                lat=40.1,
+                lon=-73.9,
+                time_utc=observed_at.isoformat(),
+            )
+        ],
+        observed_at=observed_at,
+    )
+
+    response = client.get("/live/vessels")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["items"][0]["freshness"] == "stale"
+
+
+def test_live_vessels_endpoint_ignores_expired_vessel_key(client: TestClient) -> None:
+    redis_client = app.state.redis_client
+    upsert_live_vessel_records(
+        redis_client,
+        [
+            AisVesselRecord(
+                mmsi=123456789,
+                ship_name="EXPIRED VESSEL",
+                lat=40.1,
+                lon=-73.9,
+                time_utc="2026-05-13T16:01:00+00:00",
+            )
+        ],
+        observed_at=datetime(2026, 5, 13, 16, 2, tzinfo=timezone.utc),
+    )
+    redis_client.expire_now(live_vessel_key(123456789))
+
+    response = client.get("/live/vessels")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["items"] == []
+    assert payload["metadata"]["knownCount"] == 1
+    assert payload["metadata"]["returnedCount"] == 0
+    assert redis_client.sets[LIVE_VESSELS_INDEX_KEY] == set()
 
 
 def test_live_vessels_endpoint_does_not_call_live_ais_source(

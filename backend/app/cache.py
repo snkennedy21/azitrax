@@ -14,12 +14,15 @@ from app.schemas import CachedLiveVessel
 
 # Live Redis snapshot contract only. These keys are not durable persistence and
 # should not be treated as the historical vessel storage model.
-# - vessel:{mmsi}: JSON CachedLiveVessel payload for the vessel's latest state.
+# - vessel:{mmsi}: JSON CachedLiveVessel payload for the vessel's latest state,
+#   expiring after LIVE_VESSEL_EXPIRE_AFTER_SECONDS.
 # - live:vessels: index of MMSIs currently present in the live snapshot.
 # - live:ais:status: JSON source/consumer status metadata for the live snapshot.
 LIVE_AIS_STATUS_KEY = "live:ais:status"
 LIVE_VESSELS_INDEX_KEY = "live:vessels"
 LIVE_VESSEL_KEY_PATTERN = "vessel:{mmsi}"
+LIVE_VESSEL_STALE_AFTER_SECONDS = 5 * 60
+LIVE_VESSEL_EXPIRE_AFTER_SECONDS = 30 * 60
 
 
 @dataclass(frozen=True)

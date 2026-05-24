@@ -108,6 +108,17 @@ export interface components {
              */
             timestamp?: string | null;
             /**
+             * Lastseenat
+             * @description UTC time this vessel snapshot was last refreshed
+             */
+            lastSeenAt?: string | null;
+            /**
+             * Freshness
+             * @description Freshness state derived from lastSeenAt
+             * @enum {string}
+             */
+            freshness?: "fresh" | "stale" | null;
+            /**
              * Mmsi
              * @description Maritime Mobile Service Identity when available
              */

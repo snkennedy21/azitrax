@@ -14,6 +14,9 @@ import os
 import subprocess
 import sys
 from collections.abc import Iterator
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -28,6 +31,7 @@ class FakeRedisClient:
     def __init__(self) -> None:
         self.values: dict[str, str] = {}
         self.sets: dict[str, set[object]] = {}
+        self.expires_at: dict[str, datetime] = {}
 
     def ping(self) -> bool:
         return True
@@ -36,19 +40,38 @@ class FakeRedisClient:
         return None
 
     def get(self, key: str) -> str | None:
+        if self._is_expired(key):
+            self.values.pop(key, None)
+            self.expires_at.pop(key, None)
+            return None
+
         return self.values.get(key)
 
-    def set(self, key: str, value: str) -> None:
+    def set(self, key: str, value: str, ex: int | None = None) -> None:
         self.values[key] = value
+        if ex is None:
+            self.expires_at.pop(key, None)
+        else:
+            self.expires_at[key] = datetime.now(timezone.utc) + timedelta(seconds=ex)
 
     def mget(self, keys: list[str]) -> list[str | None]:
-        return [self.values.get(key) for key in keys]
+        return [self.get(key) for key in keys]
 
     def smembers(self, key: str) -> set[object]:
         return self.sets.get(key, set())
 
     def sadd(self, key: str, *values: object) -> None:
         self.sets.setdefault(key, set()).update(values)
+
+    def srem(self, key: str, *values: object) -> None:
+        self.sets.setdefault(key, set()).difference_update(values)
+
+    def expire_now(self, key: str) -> None:
+        self.expires_at[key] = datetime.now(timezone.utc) - timedelta(seconds=1)
+
+    def _is_expired(self, key: str) -> bool:
+        expires_at = self.expires_at.get(key)
+        return expires_at is not None and expires_at <= datetime.now(timezone.utc)
 
 
 def pytest_sessionstart(session):

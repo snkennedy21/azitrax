@@ -11,6 +11,7 @@ from app.ais_consumer import upsert_live_vessel_records
 from app.ais_consumer import write_source_status
 from app.ais_source import AisSourceConfig
 from app.cache import LIVE_AIS_STATUS_KEY
+from app.cache import LIVE_VESSEL_EXPIRE_AFTER_SECONDS
 from app.cache import LIVE_VESSELS_INDEX_KEY
 from app.cache import deserialize_cached_live_vessel
 from app.cache import live_vessel_key
@@ -21,12 +22,15 @@ class FakeRedisClient:
     def __init__(self) -> None:
         self.values: dict[str, str] = {}
         self.sets: dict[str, set[str]] = {}
+        self.expirations: dict[str, int] = {}
 
     def get(self, key: str) -> str | None:
         return self.values.get(key)
 
-    def set(self, key: str, value: str) -> None:
+    def set(self, key: str, value: str, ex: int | None = None) -> None:
         self.values[key] = value
+        if ex is not None:
+            self.expirations[key] = ex
 
     def sadd(self, key: str, value: object) -> None:
         self.sets.setdefault(key, set()).add(str(value))
@@ -62,6 +66,10 @@ def test_first_live_vessel_write_updates_record_and_known_set() -> None:
     assert vessel.first_seen_at == "2026-05-13T16:02:00+00:00"
     assert vessel.last_seen_at == "2026-05-13T16:02:00+00:00"
     assert vessel.last_message_at == "2026-05-13T16:01:00+00:00"
+    assert (
+        redis_client.expirations[live_vessel_key(123456789)]
+        == LIVE_VESSEL_EXPIRE_AFTER_SECONDS
+    )
     assert redis_client.sets[LIVE_VESSELS_INDEX_KEY] == {"123456789"}
 
 
