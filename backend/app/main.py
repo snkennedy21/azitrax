@@ -128,11 +128,6 @@ def get_live_vessels(redis_client: RedisClient) -> LiveVesselsResponse:
     )
 
 
-@app.get("/vessels", include_in_schema=False)
-def get_vessels(redis_client: RedisClient) -> LiveVesselsResponse:
-    return get_live_vessels(redis_client)
-
-
 @app.get("/health/db")
 def database_health(db: DbConnection) -> dict[str, str]:
     # db is provided by FastAPI dependency injection. The DbConnection type

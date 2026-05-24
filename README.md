@@ -129,7 +129,7 @@ See [docs/source-discovery.md](docs/source-discovery.md) for the source decision
 authentication expectations, known rate-limit and availability constraints,
 payload shape, and the `fixture`/`aisstream` switch.
 
-The frontend can poll `GET /vessels` for current live vessel positions.
+The frontend can poll `GET /live/vessels` for current live vessel positions.
 The response contains `items` for map rendering and `metadata` with the AIS
 source name, UTC fetch time, and returned item count. These records are read
 from the configured AIS source and are not persisted.

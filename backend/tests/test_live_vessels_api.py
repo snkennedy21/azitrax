@@ -145,13 +145,6 @@ def test_live_vessels_endpoint_does_not_call_live_ais_source(
     assert response.status_code == 200
 
 
-def test_legacy_vessels_endpoint_uses_same_redis_snapshot(client: TestClient) -> None:
-    response = client.get("/vessels")
-
-    assert response.status_code == 200
-    assert response.json()["metadata"]["returnedCount"] == 0
-
-
 def test_live_vessels_endpoint_returns_503_when_redis_unavailable(client: TestClient) -> None:
     class UnavailableRedisClient:
         def get(self, key: str) -> None:
