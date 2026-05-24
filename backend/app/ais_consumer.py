@@ -121,12 +121,15 @@ async def _consume_aisstream(
         connect_kwargs["ssl"] = ssl._create_unverified_context()
 
     write_source_status(redis_client, status="connecting", ais_config=ais_config)
+
+    # Try connecting to aisstream continuously
     while not stop_event.is_set():
         try:
             async with connect(ais_config.aisstream_ws_url, **connect_kwargs) as websocket:
                 await websocket.send(json.dumps(subscription))
                 write_source_status(redis_client, status="connected", ais_config=ais_config)
 
+                # Pull in data from aisstream continuously
                 while not stop_event.is_set():
                     raw_message = await websocket.recv()
                     try:
