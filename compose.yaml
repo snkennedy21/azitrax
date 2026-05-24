@@ -81,9 +81,13 @@ services:
       <<: *ais-environment
       AIS_CONSUMER_POLL_SECONDS: "${AIS_CONSUMER_POLL_SECONDS:-60}"
       AIS_CONSUMER_RUN_ONCE: "${AIS_CONSUMER_RUN_ONCE:-false}"
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
     volumes:
       - ./backend:/app
       - ./docs:/docs:ro
+    depends_on:
+      redis:
+        condition: service_healthy
 
   db:
     image: postgis/postgis:16-3.4
