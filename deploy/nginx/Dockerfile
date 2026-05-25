@@ -6,6 +6,7 @@ COPY frontend/package*.json ./
 RUN npm ci
 
 COPY frontend/ ./
+ENV VITE_API_BASE_URL=/api
 RUN npm run build
 
 FROM nginx:1.27-alpine
