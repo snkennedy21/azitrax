@@ -98,6 +98,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-azitrax}
       POSTGRES_USER: ${POSTGRES_USER:-azitrax}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-azitrax}
+      TEST_POSTGRES_DB: ${TEST_POSTGRES_DB:-azitrax_test}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
