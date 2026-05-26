@@ -28,17 +28,23 @@ x-backend-environment: &backend-environment
 
 services:
   nginx:
-    build:
-      context: .
-      dockerfile: deploy/nginx/Dockerfile
+    image: nginx:1.27-alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       backend:
         condition: service_healthy
+      frontend:
+        condition: service_started
+
+  frontend:
+    image: "${AZITRAX_FRONTEND_IMAGE}:${AZITRAX_IMAGE_TAG:-develop}"
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+      VITE_API_PROXY_TARGET: ${VITE_API_PROXY_TARGET:-http://backend:8000}
 
   backend:
-    build:
-      context: ./backend
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    image: "${AZITRAX_BACKEND_IMAGE}:${AZITRAX_IMAGE_TAG:-develop}"
     environment:
       <<: [*ais-environment, *backend-environment]
     depends_on:
@@ -59,8 +65,7 @@ services:
       retries: 12
 
   ais-consumer:
-    build:
-      context: ./backend
+    image: "${AZITRAX_BACKEND_IMAGE}:${AZITRAX_IMAGE_TAG:-develop}"
     command: python -m app.ais_consumer
     environment:
       <<: *ais-environment
