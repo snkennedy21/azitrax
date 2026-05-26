@@ -48,8 +48,8 @@ def test_database_health_uses_test_database(client: TestClient, db_connection) -
     row = db_connection.execute("SELECT current_database()").fetchone()
     db_name = row["current_database"]
 
-    # Should be vector_test, not vector
-    assert db_name == "vector_test", f"Tests are running against wrong database: {db_name}"
+    # Should be azitrax_test, not azitrax
+    assert db_name == "azitrax_test", f"Tests are running against wrong database: {db_name}"
 
 
 def test_redis_health_endpoint_returns_ok(client: TestClient) -> None:

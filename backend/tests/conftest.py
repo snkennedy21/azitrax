@@ -88,9 +88,9 @@ def pytest_sessionstart(session):
     test_env.update({
         "POSTGRES_HOST": os.getenv("TEST_POSTGRES_HOST", "db"),
         "POSTGRES_PORT": os.getenv("TEST_POSTGRES_PORT", "5432"),
-        "POSTGRES_DB": os.getenv("TEST_POSTGRES_DB", "vector_test"),
-        "POSTGRES_USER": os.getenv("TEST_POSTGRES_USER", "vector"),
-        "POSTGRES_PASSWORD": os.getenv("TEST_POSTGRES_PASSWORD", "vector"),
+        "POSTGRES_DB": os.getenv("TEST_POSTGRES_DB", "azitrax_test"),
+        "POSTGRES_USER": os.getenv("TEST_POSTGRES_USER", "azitrax"),
+        "POSTGRES_PASSWORD": os.getenv("TEST_POSTGRES_PASSWORD", "azitrax"),
     })
 
     print("\n" + "=" * 80, file=sys.stderr)
@@ -136,9 +136,9 @@ def test_db_config() -> DatabaseConfig:
         database_url=None,  # Build from components instead
         host=os.getenv("TEST_POSTGRES_HOST", "db"),
         port=int(os.getenv("TEST_POSTGRES_PORT", "5432")),
-        dbname=os.getenv("TEST_POSTGRES_DB", "vector_test"),
-        user=os.getenv("TEST_POSTGRES_USER", "vector"),
-        password=os.getenv("TEST_POSTGRES_PASSWORD", "vector"),
+        dbname=os.getenv("TEST_POSTGRES_DB", "azitrax_test"),
+        user=os.getenv("TEST_POSTGRES_USER", "azitrax"),
+        password=os.getenv("TEST_POSTGRES_PASSWORD", "azitrax"),
         connect_timeout=int(os.getenv("TEST_POSTGRES_CONNECT_TIMEOUT", "5")),
         pool_min_size=int(os.getenv("TEST_POSTGRES_POOL_MIN_SIZE", "1")),
         pool_max_size=int(os.getenv("TEST_POSTGRES_POOL_MAX_SIZE", "5")),

@@ -76,7 +76,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 # Passing lifespan here tells FastAPI to run the startup/shutdown logic above.
-app = FastAPI(title="Vector API", lifespan=lifespan)
+app = FastAPI(title="Azitrax API", lifespan=lifespan)
 
 frontend_origins = [
     origin.strip()

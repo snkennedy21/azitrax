@@ -1,6 +1,6 @@
 # Frontend
 
-React client for the minimal geospatial app.
+React client for the Azitrax geospatial app.
 
 ## Local Development
 

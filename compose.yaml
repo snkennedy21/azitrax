@@ -1,3 +1,5 @@
+name: ${COMPOSE_PROJECT_NAME:-azitrax}
+
 x-ais-environment: &ais-environment
   AIS_SOURCE: "${AIS_SOURCE:-fixture}"
   AIS_FIXTURE_PATH: "${AIS_FIXTURE_PATH:-/app/app/fixtures/aisstream-position-reports-sample.json}"
@@ -33,9 +35,9 @@ services:
       DATABASE_URL: ${DATABASE_URL:-}
       POSTGRES_HOST: ${POSTGRES_HOST:-db}
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
-      POSTGRES_DB: ${POSTGRES_DB:-vector}
-      POSTGRES_USER: ${POSTGRES_USER:-vector}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vector}
+      POSTGRES_DB: ${POSTGRES_DB:-azitrax}
+      POSTGRES_USER: ${POSTGRES_USER:-azitrax}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-azitrax}
       POSTGRES_CONNECT_TIMEOUT: ${POSTGRES_CONNECT_TIMEOUT:-5}
       POSTGRES_POOL_MIN_SIZE: ${POSTGRES_POOL_MIN_SIZE:-1}
       POSTGRES_POOL_MAX_SIZE: ${POSTGRES_POOL_MAX_SIZE:-5}
@@ -43,9 +45,9 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       TEST_POSTGRES_HOST: ${TEST_POSTGRES_HOST:-db}
       TEST_POSTGRES_PORT: ${TEST_POSTGRES_PORT:-5432}
-      TEST_POSTGRES_DB: ${TEST_POSTGRES_DB:-vector_test}
-      TEST_POSTGRES_USER: ${TEST_POSTGRES_USER:-vector}
-      TEST_POSTGRES_PASSWORD: ${TEST_POSTGRES_PASSWORD:-vector}
+      TEST_POSTGRES_DB: ${TEST_POSTGRES_DB:-azitrax_test}
+      TEST_POSTGRES_USER: ${TEST_POSTGRES_USER:-azitrax}
+      TEST_POSTGRES_PASSWORD: ${TEST_POSTGRES_PASSWORD:-azitrax}
       TEST_POSTGRES_CONNECT_TIMEOUT: ${TEST_POSTGRES_CONNECT_TIMEOUT:-5}
       TEST_POSTGRES_POOL_MIN_SIZE: ${TEST_POSTGRES_POOL_MIN_SIZE:-1}
       TEST_POSTGRES_POOL_MAX_SIZE: ${TEST_POSTGRES_POOL_MAX_SIZE:-5}
@@ -93,9 +95,9 @@ services:
   db:
     image: postgis/postgis:16-3.4
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-vector}
-      POSTGRES_USER: ${POSTGRES_USER:-vector}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vector}
+      POSTGRES_DB: ${POSTGRES_DB:-azitrax}
+      POSTGRES_USER: ${POSTGRES_USER:-azitrax}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-azitrax}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -121,7 +123,7 @@ services:
     image: dpage/pgadmin4:8
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-vector}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-azitrax}
     ports:
       - "${PGADMIN_PORT:-5050}:80"
     volumes:

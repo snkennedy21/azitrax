@@ -1,6 +1,6 @@
 # Production Deploy and Smoke Test
 
-This is the first production deployment flow for running Vector on one machine
+This is the first production deployment flow for running Azitrax on one machine
 with Docker Compose and Cloudflare Tunnel.
 
 Production ingress is:
@@ -46,11 +46,17 @@ FRONTEND_ORIGINS=https://<public app hostname>
 should be the public frontend origin only, for example:
 
 ```sh
-FRONTEND_ORIGINS=https://vector.example.com
+FRONTEND_ORIGINS=https://azitrax.com
 ```
 
 Do not commit production secrets, tunnel tokens, API tokens, database passwords,
 or generated Cloudflare credential files.
+
+`compose.prod.yaml` defaults new production Compose projects and databases to
+`azitrax`. If this host already has a PostGIS volume initialized with the old
+`vector` project, database, or user names, keep temporary `.env` overrides
+pointing at those old names until you migrate, or create the `azitrax`
+database/user and move the data before removing those compatibility overrides.
 
 ## Cloudflare Tunnel
 
@@ -111,7 +117,7 @@ docker compose -f compose.prod.yaml down
 Set a shell variable for the public hostname:
 
 ```sh
-APP_ORIGIN=https://vector.example.com
+APP_ORIGIN=https://azitrax.com
 ```
 
 Replace the value with the hostname configured in Cloudflare.

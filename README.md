@@ -1,6 +1,6 @@
-# Vector
+# Azitrax
 
-Vector is a geospatial app that pulls AIS vessel data from AISStream and
+Azitrax is a geospatial app that pulls AIS vessel data from AISStream and
 renders it on an OpenLayers map.
 
 ## Table of Contents
@@ -86,7 +86,7 @@ curl http://127.0.0.1:8000/health
 Verify the database accepts connections and PostGIS is enabled:
 
 ```sh
-docker compose exec db psql -U vector -d vector -c "SELECT PostGIS_Version();"
+docker compose exec db psql -U azitrax -d azitrax -c "SELECT PostGIS_Version();"
 ```
 
 Verify the backend can connect to Postgres/PostGIS:
@@ -105,19 +105,24 @@ The local Redis service is named `redis` in Docker Compose. It exposes port
 `6379` by default and the backend reads `REDIS_URL`, which defaults in Compose
 to `redis://redis:6379/0`.
 
+Local database names now default to `azitrax` and `azitrax_test`. If you have an
+existing Docker Compose project or volume initialized with the old `vector`
+database or user, keep temporary `.env` overrides pointing at the old Compose
+project and database/user names until you migrate or recreate the local volume.
+
 ## Connecting to pgAdmin
 
 1. Open `http://127.0.0.1:5050`.
-2. Sign in with email `admin@example.com` and password `vector`.
+2. Sign in with email `admin@example.com` and password `azitrax`.
 3. Select `Add New Server`.
-4. On the `General` tab, set `Name` to `vector`.
+4. On the `General` tab, set `Name` to `azitrax`.
 5. On the `Connection` tab, use:
    - `Host name/address`: `db`
    - `Port`: `5432`
-   - `Maintenance database`: `vector`
-   - `Username`: `vector`
-   - `Password`: `vector`
-6. Save the server. The `vector` database should appear in the browser tree.
+   - `Maintenance database`: `azitrax`
+   - `Username`: `azitrax`
+   - `Password`: `azitrax`
+6. Save the server. The `azitrax` database should appear in the browser tree.
 
 ## Source Discovery
 
