@@ -193,7 +193,7 @@ curl -fsS "$APP_ORIGIN/api/health"
 Expected result:
 
 ```json
-{"status":"ok"}
+{ "status": "ok" }
 ```
 
 Check database and Redis connectivity through the same ingress path:
