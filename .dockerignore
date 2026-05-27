@@ -1,0 +1,14 @@
+.git
+.env
+.env.*
+
+frontend/node_modules
+frontend/dist
+
+backend
+db-init
+docs
+
+*.md
+compose.yaml
+compose.prod.yaml

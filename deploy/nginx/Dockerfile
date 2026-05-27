@@ -11,7 +11,7 @@ RUN npm run build
 
 FROM nginx:1.27-alpine
 
-COPY deploy/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY deploy/nginx/gateway.conf /etc/nginx/nginx.conf
 
 # Take /app/frontend/dist from the Docker build stage named frontend-build,
 # and copy it into /usr/share/nginx/html in the final nginx image.
