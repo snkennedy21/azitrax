@@ -1,0 +1,111 @@
+name: ${COMPOSE_PROJECT_NAME}
+
+x-ais-environment: &ais-environment
+  AIS_SOURCE: aisstream
+  AIS_FIXTURE_PATH: /app/app/fixtures/aisstream-position-reports-sample.json
+  AIS_ALLOW_FIXTURE_FALLBACK: "false"
+  AISSTREAM_WS_URL: "${AISSTREAM_WS_URL}"
+  AISSTREAM_API_KEY: "${AISSTREAM_API_KEY:?AISSTREAM_API_KEY is required}"
+  AISSTREAM_BOUNDING_BOXES: "${AISSTREAM_BOUNDING_BOXES}"
+  AISSTREAM_MESSAGE_TYPES: "${AISSTREAM_MESSAGE_TYPES}"
+  AISSTREAM_CONNECT_TIMEOUT_SECONDS: "${AISSTREAM_CONNECT_TIMEOUT_SECONDS}"
+  AISSTREAM_SAMPLE_MESSAGE_LIMIT: "${AISSTREAM_SAMPLE_MESSAGE_LIMIT}"
+  AISSTREAM_DISABLE_TLS_VERIFY: "${AISSTREAM_DISABLE_TLS_VERIFY}"
+
+x-backend-environment: &backend-environment
+  DATABASE_URL: "${DATABASE_URL}"
+  POSTGRES_HOST: "${POSTGRES_HOST}"
+  POSTGRES_PORT: "${POSTGRES_PORT}"
+  POSTGRES_DB: "${POSTGRES_DB}"
+  POSTGRES_USER: "${POSTGRES_USER}"
+  POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+  POSTGRES_CONNECT_TIMEOUT: "${POSTGRES_CONNECT_TIMEOUT}"
+  POSTGRES_POOL_MIN_SIZE: "${POSTGRES_POOL_MIN_SIZE}"
+  POSTGRES_POOL_MAX_SIZE: "${POSTGRES_POOL_MAX_SIZE}"
+  POSTGRES_POOL_TIMEOUT: "${POSTGRES_POOL_TIMEOUT}"
+  REDIS_URL: "${REDIS_URL}"
+  FRONTEND_ORIGINS: "${FRONTEND_ORIGINS:?FRONTEND_ORIGINS is required}"
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+
+  frontend:
+    image: "${AZITRAX_FRONTEND_IMAGE}:${AZITRAX_IMAGE_TAG}"
+    environment:
+      VITE_API_BASE_URL: "${VITE_API_BASE_URL}"
+      VITE_API_PROXY_TARGET: "${VITE_API_PROXY_TARGET}"
+
+  backend:
+    image: "${AZITRAX_BACKEND_IMAGE}:${AZITRAX_IMAGE_TAG}"
+    environment:
+      <<: [*ais-environment, *backend-environment]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  ais-consumer:
+    image: "${AZITRAX_BACKEND_IMAGE}:${AZITRAX_IMAGE_TAG}"
+    command: python -m app.ais_consumer
+    environment:
+      <<: *ais-environment
+      AIS_CONSUMER_POLL_SECONDS: "${AIS_CONSUMER_POLL_SECONDS}"
+      AIS_CONSUMER_RUN_ONCE: "false"
+      AIS_CONSUMER_RECONNECT_BACKOFF_SECONDS: "${AIS_CONSUMER_RECONNECT_BACKOFF_SECONDS}"
+      REDIS_URL: "${REDIS_URL}"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB}"
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: "${CLOUDFLARED_TUNNEL_TOKEN:?CLOUDFLARED_TUNNEL_TOKEN is required}"
+    depends_on:
+      - nginx
+
+volumes:
+  postgres_data:

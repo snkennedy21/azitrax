@@ -1,6 +1,6 @@
 # Backend
 
-FastAPI service for the minimal geospatial app.
+FastAPI service for the Azitrax geospatial app.
 
 ## Local Development
 
@@ -24,6 +24,12 @@ Check that it can connect to Postgres/PostGIS:
 curl http://127.0.0.1:8000/health/db
 ```
 
+Check that it can connect to Redis:
+
+```sh
+curl http://127.0.0.1:8000/health/redis
+```
+
 Create a point:
 
 ```sh
@@ -39,14 +45,22 @@ The backend uses direct SQL through `psycopg` v3. Connection settings are read f
 - `DATABASE_URL`: optional full Postgres connection URL. When set, it overrides the individual `POSTGRES_*` fields.
 - `POSTGRES_HOST`: database host. Defaults to `127.0.0.1` in Python and `db` in Compose.
 - `POSTGRES_PORT`: database port. Defaults to `5432`.
-- `POSTGRES_DB`: database name. Defaults to `vector`.
-- `POSTGRES_USER`: database user. Defaults to `vector`.
-- `POSTGRES_PASSWORD`: database password. Defaults to `vector`.
+- `POSTGRES_DB`: database name. Defaults to `azitrax`.
+- `POSTGRES_USER`: database user. Defaults to `azitrax`.
+- `POSTGRES_PASSWORD`: database password. Defaults to `azitrax`.
 - `POSTGRES_CONNECT_TIMEOUT`: connection timeout in seconds. Defaults to `5`.
 - `POSTGRES_POOL_MIN_SIZE`: minimum open connections in the pool. Defaults to `1`.
 - `POSTGRES_POOL_MAX_SIZE`: maximum open connections in the pool. Defaults to `5`.
 - `POSTGRES_POOL_TIMEOUT`: seconds to wait for an available pooled connection. Defaults to `5`.
+- `REDIS_URL`: Redis connection URL. Defaults to `redis://127.0.0.1:6379/0` in Python and `redis://redis:6379/0` in Compose.
 - `FRONTEND_ORIGINS`: comma-separated origins allowed by CORS. Defaults to `http://127.0.0.1:5173,http://localhost:5173`.
+
+The local Docker Compose Redis service is named `redis` and exposes port `6379`.
+
+The local Compose project and database defaults are `azitrax` and
+`azitrax_test`. If an existing development volume was initialized before the
+Azitrax rename, keep temporary `.env` overrides pointing at the old Compose
+project and database/user names until you migrate or recreate it.
 
 Use parameterized SQL for any query that includes external input:
 
@@ -64,7 +78,7 @@ The backend uses pytest for testing with a separate test database for isolation.
 
 ### Setup
 
-1. The `vector_test` database is created automatically when you start Docker Compose (via init script in `db-init/`)
+1. The `azitrax_test` database is created automatically when you start Docker Compose (via init script in `db-init/`)
 
 2. Install test dependencies:
    ```sh
@@ -77,7 +91,7 @@ The backend uses pytest for testing with a separate test database for isolation.
 ```sh
 # Set test database environment variables
 export TEST_POSTGRES_HOST=127.0.0.1
-export TEST_POSTGRES_DB=vector_test
+export TEST_POSTGRES_DB=azitrax_test
 
 # Run all tests
 pytest
@@ -106,4 +120,4 @@ docker compose exec backend pytest -v
 
 ### Database Isolation
 
-Tests run against a separate `vector_test` database. Each test automatically cleans up data using `TRUNCATE TABLE` to ensure isolation between tests.
+Tests run against a separate `azitrax_test` database. Each test automatically cleans up data using `TRUNCATE TABLE` to ensure isolation between tests.

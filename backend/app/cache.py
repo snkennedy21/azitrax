@@ -1,0 +1,74 @@
+from dataclasses import dataclass
+import os
+from typing import Annotated
+from typing import Any
+
+from fastapi import Depends
+from fastapi import HTTPException
+from fastapi import Request
+from redis import Redis
+from redis.exceptions import RedisError
+
+from app.schemas import CachedLiveVessel
+
+
+# Live Redis snapshot contract only. These keys are not durable persistence and
+# should not be treated as the historical vessel storage model.
+# - vessel:{mmsi}: JSON CachedLiveVessel payload for the vessel's latest state,
+#   expiring after LIVE_VESSEL_EXPIRE_AFTER_SECONDS.
+# - live:vessels: index of MMSIs currently present in the live snapshot.
+# - live:ais:status: JSON source/consumer status metadata for the live snapshot.
+LIVE_AIS_STATUS_KEY = "live:ais:status"
+LIVE_VESSELS_INDEX_KEY = "live:vessels"
+LIVE_VESSEL_KEY_PATTERN = "vessel:{mmsi}"
+LIVE_VESSEL_STALE_AFTER_SECONDS = 5 * 60
+LIVE_VESSEL_EXPIRE_AFTER_SECONDS = 30 * 60
+
+
+@dataclass(frozen=True)
+class RedisConfig:
+    redis_url: str
+
+    @classmethod
+    def from_env(cls) -> "RedisConfig":
+        return cls(redis_url=os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0"))
+
+
+def create_redis_client(config: RedisConfig | None = None) -> Redis:
+    config = config or RedisConfig.from_env()
+    return Redis.from_url(
+        config.redis_url,
+        decode_responses=True,
+        socket_connect_timeout=5,
+        socket_timeout=5,
+    )
+
+
+def get_redis_client(request: Request) -> Redis:
+    client = getattr(request.app.state, "redis_client", None)
+    if client is None:
+        raise RuntimeError("Redis client has not been initialized")
+
+    return client
+
+
+def check_redis_connection(client: Any) -> None:
+    try:
+        client.ping()
+    except RedisError as exc:
+        raise HTTPException(status_code=503, detail="redis unavailable") from exc
+
+
+def live_vessel_key(mmsi: int) -> str:
+    return LIVE_VESSEL_KEY_PATTERN.format(mmsi=mmsi)
+
+
+def serialize_cached_live_vessel(vessel: CachedLiveVessel) -> str:
+    return vessel.model_dump_json(by_alias=True)
+
+
+def deserialize_cached_live_vessel(payload: str | bytes) -> CachedLiveVessel:
+    return CachedLiveVessel.model_validate_json(payload)
+
+
+RedisClient = Annotated[Redis, Depends(get_redis_client)]

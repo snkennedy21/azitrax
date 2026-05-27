@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Shared pytest fixtures for FastAPI testing.
 
 This module provides fixtures for:
@@ -12,6 +14,9 @@ import os
 import subprocess
 import sys
 from collections.abc import Iterator
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -20,6 +25,53 @@ from psycopg_pool import ConnectionPool
 
 from app.database import create_pool, DatabaseConfig
 from app.main import app
+
+
+class FakeRedisClient:
+    def __init__(self) -> None:
+        self.values: dict[str, str] = {}
+        self.sets: dict[str, set[object]] = {}
+        self.expires_at: dict[str, datetime] = {}
+
+    def ping(self) -> bool:
+        return True
+
+    def close(self) -> None:
+        return None
+
+    def get(self, key: str) -> str | None:
+        if self._is_expired(key):
+            self.values.pop(key, None)
+            self.expires_at.pop(key, None)
+            return None
+
+        return self.values.get(key)
+
+    def set(self, key: str, value: str, ex: int | None = None) -> None:
+        self.values[key] = value
+        if ex is None:
+            self.expires_at.pop(key, None)
+        else:
+            self.expires_at[key] = datetime.now(timezone.utc) + timedelta(seconds=ex)
+
+    def mget(self, keys: list[str]) -> list[str | None]:
+        return [self.get(key) for key in keys]
+
+    def smembers(self, key: str) -> set[object]:
+        return self.sets.get(key, set())
+
+    def sadd(self, key: str, *values: object) -> None:
+        self.sets.setdefault(key, set()).update(values)
+
+    def srem(self, key: str, *values: object) -> None:
+        self.sets.setdefault(key, set()).difference_update(values)
+
+    def expire_now(self, key: str) -> None:
+        self.expires_at[key] = datetime.now(timezone.utc) - timedelta(seconds=1)
+
+    def _is_expired(self, key: str) -> bool:
+        expires_at = self.expires_at.get(key)
+        return expires_at is not None and expires_at <= datetime.now(timezone.utc)
 
 
 def pytest_sessionstart(session):
@@ -36,9 +88,9 @@ def pytest_sessionstart(session):
     test_env.update({
         "POSTGRES_HOST": os.getenv("TEST_POSTGRES_HOST", "db"),
         "POSTGRES_PORT": os.getenv("TEST_POSTGRES_PORT", "5432"),
-        "POSTGRES_DB": os.getenv("TEST_POSTGRES_DB", "vector_test"),
-        "POSTGRES_USER": os.getenv("TEST_POSTGRES_USER", "vector"),
-        "POSTGRES_PASSWORD": os.getenv("TEST_POSTGRES_PASSWORD", "vector"),
+        "POSTGRES_DB": os.getenv("TEST_POSTGRES_DB", "azitrax_test"),
+        "POSTGRES_USER": os.getenv("TEST_POSTGRES_USER", "azitrax"),
+        "POSTGRES_PASSWORD": os.getenv("TEST_POSTGRES_PASSWORD", "azitrax"),
     })
 
     print("\n" + "=" * 80, file=sys.stderr)
@@ -84,9 +136,9 @@ def test_db_config() -> DatabaseConfig:
         database_url=None,  # Build from components instead
         host=os.getenv("TEST_POSTGRES_HOST", "db"),
         port=int(os.getenv("TEST_POSTGRES_PORT", "5432")),
-        dbname=os.getenv("TEST_POSTGRES_DB", "vector_test"),
-        user=os.getenv("TEST_POSTGRES_USER", "vector"),
-        password=os.getenv("TEST_POSTGRES_PASSWORD", "vector"),
+        dbname=os.getenv("TEST_POSTGRES_DB", "azitrax_test"),
+        user=os.getenv("TEST_POSTGRES_USER", "azitrax"),
+        password=os.getenv("TEST_POSTGRES_PASSWORD", "azitrax"),
         connect_timeout=int(os.getenv("TEST_POSTGRES_CONNECT_TIMEOUT", "5")),
         pool_min_size=int(os.getenv("TEST_POSTGRES_POOL_MIN_SIZE", "1")),
         pool_max_size=int(os.getenv("TEST_POSTGRES_POOL_MAX_SIZE", "5")),
@@ -128,6 +180,7 @@ def client(test_db_pool: ConnectionPool) -> Iterator[TestClient]:
     """
     # Override the db_pool in app.state to use test database
     app.state.db_pool = test_db_pool
+    app.state.redis_client = FakeRedisClient()
 
     test_client = TestClient(app)
     try:

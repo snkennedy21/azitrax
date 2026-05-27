@@ -1,22 +1,34 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
+from datetime import timedelta
 from datetime import timezone
 import os
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from psycopg import Error as PsycopgError
+from pydantic import ValidationError
+from redis.exceptions import RedisError
 
-from app.ais_source import AisSourceError
 from app.ais_source import AisSourceConfig
-from app.ais_source import load_ais_vessel_records
-from app.ais_source import map_live_vessel_items
+from app.ais_source import DEFAULT_BOUNDING_BOXES
+from app.ais_consumer import read_source_status
+from app.cache import check_redis_connection
+from app.cache import create_redis_client
+from app.cache import deserialize_cached_live_vessel
+from app.cache import LIVE_VESSEL_STALE_AFTER_SECONDS
+from app.cache import LIVE_VESSELS_INDEX_KEY
+from app.cache import live_vessel_key
+from app.cache import RedisClient
 from app.database import create_pool
 from app.database import DbConnection
 from app.migrations import run_migrations
 from app.migrations import validate_migrations
+from app.schemas import CachedLiveVessel
+from app.schemas import LiveVesselMapItem
 from app.schemas import LiveVesselsMetadata
 from app.schemas import LiveVesselsResponse
 from app.schemas import PointCreate
@@ -51,18 +63,20 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # app.state is FastAPI's place for storing process-wide objects. Later,
     # the database dependency reads this same pool from request.app.state.
     app.state.db_pool = db_pool
+    app.state.redis_client = create_redis_client()
 
     try:
         # yield hands control back to FastAPI. The app serves requests until
         # shutdown, then execution continues in the finally block below.
         yield
     finally:
+        app.state.redis_client.close()
         # Close all pooled database connections when the backend process exits.
         db_pool.close()
 
 
 # Passing lifespan here tells FastAPI to run the startup/shutdown logic above.
-app = FastAPI(title="Vector API", lifespan=lifespan)
+app = FastAPI(title="Azitrax API", lifespan=lifespan)
 
 frontend_origins = [
     origin.strip()
@@ -89,21 +103,30 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/vessels")
-async def get_vessels() -> LiveVesselsResponse:
+@app.get("/live/vessels")
+def get_live_vessels(redis_client: RedisClient) -> LiveVesselsResponse:
+    fetched_at = datetime.now(timezone.utc)
     try:
-        config = AisSourceConfig.from_env()
-        records = await load_ais_vessel_records(config)
-    except AisSourceError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        source_status = read_source_status(redis_client)
+        source, bounding_boxes = _live_snapshot_config(source_status)
+        raw_ids = redis_client.smembers(LIVE_VESSELS_INDEX_KEY)
+        vessel_ids = _normalize_vessel_ids(raw_ids)
+        cached_vessels = _load_cached_live_vessels(redis_client, vessel_ids)
+    except RedisError as exc:
+        raise HTTPException(status_code=503, detail="redis unavailable") from exc
 
-    items = map_live_vessel_items(records)
+    items = [_cached_vessel_to_map_item(vessel, fetched_at) for vessel in cached_vessels]
     return LiveVesselsResponse(
         items=items,
         metadata=LiveVesselsMetadata(
-            source=config.source,
-            fetched_at=datetime.now(timezone.utc).isoformat(),
+            source=source,
+            fetched_at=fetched_at.isoformat(),
+            known_count=len(vessel_ids),
             returned_count=len(items),
+            last_message_at=_max_timestamp(vessel.last_message_at for vessel in cached_vessels),
+            oldest_last_seen_at=_min_timestamp(vessel.last_seen_at for vessel in cached_vessels),
+            source_status=source_status or {"source": source, "status": "warming"},
+            bounding_boxes=bounding_boxes,
         ),
     )
 
@@ -128,6 +151,12 @@ def database_health(db: DbConnection) -> dict[str, str]:
 
     # Rows come back dict-like because database.py configured row_factory=dict_row.
     return {"status": "ok", "postgis_version": row["postgis_version"]}
+
+
+@app.get("/health/redis")
+def redis_health(redis_client: RedisClient) -> dict[str, str]:
+    check_redis_connection(redis_client)
+    return {"status": "ok"}
 
 
 @app.post("/points", status_code=201)
@@ -186,3 +215,113 @@ def get_points(db: DbConnection) -> list[PointListItem]:
         )
         for row in rows
     ]
+
+
+def _normalize_vessel_ids(raw_ids: set[Any]) -> list[int]:
+    vessel_ids: list[int] = []
+    for raw_id in raw_ids:
+        try:
+            vessel_ids.append(int(raw_id))
+        except (TypeError, ValueError):
+            continue
+
+    return sorted(vessel_ids)
+
+
+def _load_cached_live_vessels(
+    redis_client: Any,
+    vessel_ids: list[int],
+) -> list[CachedLiveVessel]:
+    if not vessel_ids:
+        return []
+
+    keys = [live_vessel_key(vessel_id) for vessel_id in vessel_ids]
+    if hasattr(redis_client, "mget"):
+        payloads = redis_client.mget(keys)
+    else:
+        payloads = [redis_client.get(key) for key in keys]
+
+    vessels: list[CachedLiveVessel] = []
+    stale_index_ids: list[int] = []
+    for vessel_id, payload in zip(vessel_ids, payloads, strict=True):
+        if not payload:
+            stale_index_ids.append(vessel_id)
+            continue
+
+        try:
+            vessel = deserialize_cached_live_vessel(payload)
+        except (TypeError, ValueError, ValidationError):
+            stale_index_ids.append(vessel_id)
+            continue
+
+        vessels.append(vessel)
+
+    _remove_stale_index_ids(redis_client, stale_index_ids)
+    return vessels
+
+
+def _cached_vessel_to_map_item(vessel: CachedLiveVessel, fetched_at: datetime) -> LiveVesselMapItem:
+    return LiveVesselMapItem(
+        id=vessel.id,
+        lat=vessel.lat,
+        lon=vessel.lon,
+        timestamp=vessel.timestamp,
+        last_seen_at=vessel.last_seen_at,
+        freshness=_vessel_freshness(vessel, fetched_at),
+        mmsi=vessel.mmsi,
+        label=vessel.label,
+        course=vessel.course,
+        heading=vessel.heading,
+        speed=vessel.speed,
+        destination=vessel.destination,
+    )
+
+
+def _live_snapshot_config(source_status: dict[str, Any]) -> tuple[str, list[Any]]:
+    try:
+        config = AisSourceConfig.from_env()
+    except (ValueError, RuntimeError):
+        status_source = source_status.get("source")
+        return (status_source if isinstance(status_source, str) else "unknown", DEFAULT_BOUNDING_BOXES)
+
+    status_source = source_status.get("source")
+    source = status_source if isinstance(status_source, str) else config.source
+    return source, config.aisstream_bounding_boxes or DEFAULT_BOUNDING_BOXES
+
+
+def _max_timestamp(values: Any) -> str | None:
+    timestamps = [value for value in values if isinstance(value, str)]
+    return max(timestamps) if timestamps else None
+
+
+def _min_timestamp(values: Any) -> str | None:
+    timestamps = [value for value in values if isinstance(value, str)]
+    return min(timestamps) if timestamps else None
+
+
+def _vessel_freshness(vessel: CachedLiveVessel, fetched_at: datetime) -> str:
+    last_seen_at = _parse_utc_timestamp(vessel.last_seen_at)
+    if last_seen_at is None:
+        return "stale"
+
+    stale_after = timedelta(seconds=LIVE_VESSEL_STALE_AFTER_SECONDS)
+    return "stale" if fetched_at - last_seen_at >= stale_after else "fresh"
+
+
+def _parse_utc_timestamp(value: str) -> datetime | None:
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+
+    return parsed.astimezone(timezone.utc)
+
+
+def _remove_stale_index_ids(redis_client: Any, vessel_ids: list[int]) -> None:
+    if not vessel_ids or not hasattr(redis_client, "srem"):
+        return
+
+    redis_client.srem(LIVE_VESSELS_INDEX_KEY, *vessel_ids)

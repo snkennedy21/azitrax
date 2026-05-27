@@ -1,0 +1,173 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Azitrax
+    runs-on: ubuntu-latest
+    environment: production
+
+    env:
+      DEPLOY_HOST: ${{ vars.AZITRAX_DEPLOY_HOST }}
+      DEPLOY_USER: ${{ vars.AZITRAX_DEPLOY_SSH_USER }}
+      DEPLOY_DIR: ${{ vars.AZITRAX_DEPLOY_DIR }}
+      DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.AZITRAX_DEPLOY_SSH_PRIVATE_KEY }}
+      TAILSCALE_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY }}
+
+      COMPOSE_PROJECT_NAME: azitrax
+      AZITRAX_IMAGE_TAG: ${{ vars.AZITRAX_IMAGE_TAG }}
+      AZITRAX_BACKEND_IMAGE: ghcr.io/snkennedy21/azitrax-backend
+      AZITRAX_FRONTEND_IMAGE: ghcr.io/snkennedy21/azitrax-frontend
+
+      CLOUDFLARED_TUNNEL_TOKEN: ${{ secrets.AZITRAX_CLOUDFLARED_TUNNEL_TOKEN }}
+
+      DATABASE_URL: ""
+      POSTGRES_DB: ${{ vars.AZITRAX_POSTGRES_DB }}
+      POSTGRES_HOST: db
+      POSTGRES_USER: ${{ vars.AZITRAX_POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.AZITRAX_POSTGRES_PASSWORD }}
+      POSTGRES_PORT: "5432"
+      POSTGRES_CONNECT_TIMEOUT: "5"
+      POSTGRES_POOL_MIN_SIZE: "1"
+      POSTGRES_POOL_MAX_SIZE: "5"
+      POSTGRES_POOL_TIMEOUT: "5"
+
+      REDIS_URL: redis://redis:6379/0
+      FRONTEND_ORIGINS: ${{ vars.AZITRAX_PUBLIC_ORIGIN }}
+
+      AISSTREAM_WS_URL: wss://stream.aisstream.io/v0/stream
+      AISSTREAM_API_KEY: ${{ secrets.AZITRAX_AISSTREAM_API_KEY }}
+      AISSTREAM_BOUNDING_BOXES: "[[[40.4774,-74.2591],[40.9176,-73.7004]]]"
+      AISSTREAM_MESSAGE_TYPES: PositionReport
+      AISSTREAM_CONNECT_TIMEOUT_SECONDS: "200"
+      AISSTREAM_SAMPLE_MESSAGE_LIMIT: "50"
+      AISSTREAM_DISABLE_TLS_VERIFY: "false"
+      AIS_CONSUMER_POLL_SECONDS: "60"
+      AIS_CONSUMER_RECONNECT_BACKOFF_SECONDS: "5"
+
+      VITE_API_BASE_URL: /api
+      VITE_API_PROXY_TARGET: http://backend:8000
+
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required environment
+        run: |
+          set -euo pipefail
+          required=(
+            DEPLOY_HOST
+            DEPLOY_USER
+            DEPLOY_DIR
+            DEPLOY_SSH_PRIVATE_KEY
+            TAILSCALE_AUTHKEY
+            AZITRAX_IMAGE_TAG
+            CLOUDFLARED_TUNNEL_TOKEN
+            POSTGRES_DB
+            POSTGRES_USER
+            POSTGRES_PASSWORD
+            FRONTEND_ORIGINS
+            AISSTREAM_API_KEY
+          )
+
+          for name in "${required[@]}"; do
+            if [ -z "${!name}" ]; then
+              echo "Missing required production deploy value: $name" >&2
+              exit 1
+            fi
+          done
+
+      - name: Join Tailnet
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ env.TAILSCALE_AUTHKEY }}
+
+      - name: Configure SSH
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Build deploy bundle
+        run: |
+          set -euo pipefail
+          mkdir -p .deploy
+          cp compose.prod.yaml .deploy/compose.yaml
+          cp deploy/nginx/gateway.conf .deploy/nginx.conf
+
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          keys = [
+              "COMPOSE_PROJECT_NAME",
+              "AZITRAX_IMAGE_TAG",
+              "AZITRAX_BACKEND_IMAGE",
+              "AZITRAX_FRONTEND_IMAGE",
+              "CLOUDFLARED_TUNNEL_TOKEN",
+              "DATABASE_URL",
+              "POSTGRES_DB",
+              "POSTGRES_HOST",
+              "POSTGRES_USER",
+              "POSTGRES_PASSWORD",
+              "POSTGRES_PORT",
+              "POSTGRES_CONNECT_TIMEOUT",
+              "POSTGRES_POOL_MIN_SIZE",
+              "POSTGRES_POOL_MAX_SIZE",
+              "POSTGRES_POOL_TIMEOUT",
+              "REDIS_URL",
+              "FRONTEND_ORIGINS",
+              "AISSTREAM_WS_URL",
+              "AISSTREAM_API_KEY",
+              "AISSTREAM_BOUNDING_BOXES",
+              "AISSTREAM_MESSAGE_TYPES",
+              "AISSTREAM_CONNECT_TIMEOUT_SECONDS",
+              "AISSTREAM_SAMPLE_MESSAGE_LIMIT",
+              "AISSTREAM_DISABLE_TLS_VERIFY",
+              "AIS_CONSUMER_POLL_SECONDS",
+              "AIS_CONSUMER_RECONNECT_BACKOFF_SECONDS",
+              "VITE_API_BASE_URL",
+              "VITE_API_PROXY_TARGET",
+          ]
+
+          def quote(value):
+              return "'" + value.replace("'", "'\\''") + "'"
+
+          lines = [f"{key}={quote(os.environ.get(key, ''))}" for key in keys]
+          Path(".deploy/.env").write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
+
+      - name: Upload deploy bundle
+        run: |
+          set -euo pipefail
+          target="$DEPLOY_USER@$DEPLOY_HOST"
+          remote_tmp="$(ssh "$target" 'mktemp -d')"
+          scp .deploy/compose.yaml .deploy/nginx.conf .deploy/.env "$target:$remote_tmp/"
+          ssh "$target" "mkdir -p '$DEPLOY_DIR' && cp '$remote_tmp/compose.yaml' '$remote_tmp/nginx.conf' '$remote_tmp/.env' '$DEPLOY_DIR/' && chmod 600 '$DEPLOY_DIR/.env' && rm -rf '$remote_tmp'"
+
+      - name: Log in to GHCR on production host
+        if: ${{ env.GHCR_USERNAME != '' && env.GHCR_TOKEN != '' }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GHCR_TOKEN" | ssh "$DEPLOY_USER@$DEPLOY_HOST" "docker login ghcr.io --username '$GHCR_USERNAME' --password-stdin"
+
+      - name: Deploy with Docker Compose
+        run: |
+          set -euo pipefail
+          ssh "$DEPLOY_USER@$DEPLOY_HOST" "cd '$DEPLOY_DIR' && docker compose pull && docker compose up -d --remove-orphans"
+
+      - name: Verify backend health
+        run: |
+          set -euo pipefail
+          ssh "$DEPLOY_USER@$DEPLOY_HOST" "cd '$DEPLOY_DIR' && docker compose exec -T backend python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()\""

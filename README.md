@@ -1,6 +1,6 @@
-# Vector
+# Azitrax
 
-Vector is a geospatial app that pulls AIS vessel data from AISStream and
+Azitrax is a geospatial app that pulls AIS vessel data from AISStream and
 renders it on an OpenLayers map.
 
 ## Table of Contents
@@ -13,6 +13,7 @@ renders it on an OpenLayers map.
 - [Type Generation](#type-generation)
   - [Regenerating Types](#regenerating-types)
   - [Type Generation Architecture](#type-generation-architecture)
+- [Running Tests](#running-tests)
 
 ## Getting Started
 
@@ -48,6 +49,7 @@ Open the app:
 
 - Client: `http://127.0.0.1:5173`
 - API: `http://127.0.0.1:8000`
+- Redis: `127.0.0.1:6379` locally, `redis:6379` inside Compose
 - pgAdmin: `http://127.0.0.1:5050`
 
 To stop everything:
@@ -68,7 +70,9 @@ AIS_ALLOW_FIXTURE_FALLBACK=true
 
 - `frontend/`: React app that renders the map, handles map clicks, calls the backend API, and draws saved points.
 - `backend/`: FastAPI app that exposes point endpoints, runs SQL, and communicates with Postgres/PostGIS.
-- `compose.yaml`: Local frontend, backend, Postgres/PostGIS, and pgAdmin service configuration for development.
+- `compose.yaml`: Local frontend, backend, Postgres/PostGIS, Redis, and pgAdmin service configuration for development.
+- `compose.prod.yaml`: Production image-based Compose stack copied by the deploy workflow to `/srv/azitrax/compose.yaml`.
+- `.github/workflows/deploy-production.yml`: GitHub Actions production deploy workflow.
 - `docs/smoke-test.md`: Manual browser smoke test for the Phase 0 map workflow.
 - `minimal_geospatial_design.md`: Phase 0 design and architecture notes.
 - `github_issues_phase_0.md`: Initial GitHub issue backlog derived from the Phase 0 design.
@@ -84,7 +88,7 @@ curl http://127.0.0.1:8000/health
 Verify the database accepts connections and PostGIS is enabled:
 
 ```sh
-docker compose exec db psql -U vector -d vector -c "SELECT PostGIS_Version();"
+docker compose exec db psql -U azitrax -d azitrax -c "SELECT PostGIS_Version();"
 ```
 
 Verify the backend can connect to Postgres/PostGIS:
@@ -93,19 +97,34 @@ Verify the backend can connect to Postgres/PostGIS:
 curl http://127.0.0.1:8000/health/db
 ```
 
+Verify the backend can connect to Redis:
+
+```sh
+curl http://127.0.0.1:8000/health/redis
+```
+
+The local Redis service is named `redis` in Docker Compose. It exposes port
+`6379` by default and the backend reads `REDIS_URL`, which defaults in Compose
+to `redis://redis:6379/0`.
+
+Local database names now default to `azitrax` and `azitrax_test`. If you have an
+existing Docker Compose project or volume initialized with the old `vector`
+database or user, keep temporary `.env` overrides pointing at the old Compose
+project and database/user names until you migrate or recreate the local volume.
+
 ## Connecting to pgAdmin
 
 1. Open `http://127.0.0.1:5050`.
-2. Sign in with email `admin@example.com` and password `vector`.
+2. Sign in with email `admin@example.com` and password `azitrax`.
 3. Select `Add New Server`.
-4. On the `General` tab, set `Name` to `vector`.
+4. On the `General` tab, set `Name` to `azitrax`.
 5. On the `Connection` tab, use:
    - `Host name/address`: `db`
    - `Port`: `5432`
-   - `Maintenance database`: `vector`
-   - `Username`: `vector`
-   - `Password`: `vector`
-6. Save the server. The `vector` database should appear in the browser tree.
+   - `Maintenance database`: `azitrax`
+   - `Username`: `azitrax`
+   - `Password`: `azitrax`
+6. Save the server. The `azitrax` database should appear in the browser tree.
 
 ## Source Discovery
 
@@ -117,7 +136,7 @@ See [docs/source-discovery.md](docs/source-discovery.md) for the source decision
 authentication expectations, known rate-limit and availability constraints,
 payload shape, and the `fixture`/`aisstream` switch.
 
-The frontend can poll `GET /vessels` for current live vessel positions.
+The frontend can poll `GET /live/vessels` for current live vessel positions.
 The response contains `items` for map rendering and `metadata` with the AIS
 source name, UTC fetch time, and returned item count. These records are read
 from the configured AIS source and are not persisted.
@@ -148,3 +167,11 @@ When you modify Pydantic models or API endpoints in the backend:
 - **Generated Types**: [frontend/src/services/api/types.generated.ts](frontend/src/services/api/types.generated.ts) (do not edit manually)
 - **Type Helpers**: [frontend/src/services/api/type-helpers.ts](frontend/src/services/api/type-helpers.ts) (clean type aliases)
 - **Public API**: [frontend/src/services/api/types.ts](frontend/src/services/api/types.ts) (re-exports for components)
+
+## Running Tests
+
+Backend Test Suite
+
+```sh
+docker compose exec backend pytest
+```
