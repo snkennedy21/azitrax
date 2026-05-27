@@ -1,7 +1,7 @@
 # Production Deploy and Smoke Test
 
-This is the first production deployment flow for running Azitrax on one machine
-with Docker Compose and Cloudflare Tunnel.
+This is the production deployment flow for running Azitrax on one machine with
+Docker Compose, Ansible, and Cloudflare Tunnel.
 
 Production ingress is:
 
@@ -33,7 +33,12 @@ On the production mini PC:
 
 ## Required Environment
 
-Create an uncommitted `.env` file on the production host:
+Production environment values are rendered by Ansible into
+`/srv/azitrax/.env` on every deploy. Do not hand-edit that generated file to fix
+drift. Set the source values in the Ansible variables or secrets used by
+`kubernetes-playground/playbooks/deploy-vector.yml`.
+
+Required secret values:
 
 ```sh
 CLOUDFLARED_TUNNEL_TOKEN=<Cloudflare Tunnel token>
@@ -50,12 +55,12 @@ FRONTEND_ORIGINS=https://azitrax.com
 ```
 
 Do not commit production secrets, tunnel tokens, API tokens, database passwords,
-or generated Cloudflare credential files.
+generated `.env` files, or generated Cloudflare credential files.
 
 `compose.prod.yaml` defaults new production Compose projects and databases to
 `azitrax`. If this host already has a PostGIS volume initialized with the old
-`vector` project, database, or user names, keep temporary `.env` overrides
-pointing at those old names until you migrate, or create the `azitrax`
+`vector` project, database, or user names, keep temporary Ansible variable
+overrides pointing at those old names until you migrate, or create the `azitrax`
 database/user and move the data before removing those compatibility overrides.
 
 ## Cloudflare Tunnel
@@ -64,7 +69,8 @@ Create or attach a remotely managed Cloudflare Tunnel:
 
 1. In Cloudflare, create a tunnel for this app.
 2. Choose the Docker connector setup and copy the tunnel token.
-3. Put that token in `.env` as `CLOUDFLARED_TUNNEL_TOKEN`.
+3. Store that token in the Ansible secret value rendered as
+   `CLOUDFLARED_TUNNEL_TOKEN`.
 4. Add a public hostname route for the production hostname.
 5. Set the route service URL to:
 
@@ -77,39 +83,47 @@ tunnel and forwards requests to private nginx over the Docker network.
 
 See `deploy/cloudflared/README.md` for the focused tunnel credential notes.
 
-## Start, Stop, and Inspect
+## Deploy, Stop, and Inspect
 
-Start the production stack:
+`compose.prod.yaml` is the only production Compose source in this repository.
+Ansible copies it to the server as `/srv/azitrax/compose.yaml`, alongside the
+generated `/srv/azitrax/.env` and nginx gateway config.
+
+Deploy from the Ansible workspace:
 
 ```sh
-docker compose -f compose.prod.yaml up -d --build
+cd ../kubernetes-playground
+ansible-playbook playbooks/deploy-vector.yml
 ```
 
-Inspect service state:
+Inspect service state on the production host:
 
 ```sh
-docker compose -f compose.prod.yaml ps
+cd /srv/azitrax
+docker compose ps
 ```
 
 Follow logs:
 
 ```sh
-docker compose -f compose.prod.yaml logs -f
+cd /srv/azitrax
+docker compose logs -f
 ```
 
 Follow one service:
 
 ```sh
-docker compose -f compose.prod.yaml logs -f cloudflared
-docker compose -f compose.prod.yaml logs -f nginx
-docker compose -f compose.prod.yaml logs -f backend
-docker compose -f compose.prod.yaml logs -f ais-consumer
+docker compose logs -f cloudflared
+docker compose logs -f nginx
+docker compose logs -f backend
+docker compose logs -f ais-consumer
 ```
 
 Stop the stack without deleting the PostGIS volume:
 
 ```sh
-docker compose -f compose.prod.yaml down
+cd /srv/azitrax
+docker compose down
 ```
 
 ## Smoke Test
@@ -174,13 +188,13 @@ Backend startup runs Flyway migrations before serving requests. Verify from
 logs:
 
 ```sh
-docker compose -f compose.prod.yaml logs backend | grep -E "Database migrations completed successfully|Flyway"
+docker compose logs backend | grep -E "Database migrations completed successfully|Flyway"
 ```
 
 Verify from PostGIS:
 
 ```sh
-docker compose -f compose.prod.yaml exec db sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT installed_rank, version, description, success FROM flyway_schema_history ORDER BY installed_rank;"'
+docker compose exec db sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT installed_rank, version, description, success FROM flyway_schema_history ORDER BY installed_rank;"'
 ```
 
 Expected result: migration rows exist and `success` is true.
@@ -190,14 +204,14 @@ Expected result: migration rows exist and `success` is true.
 Check that the consumer is running:
 
 ```sh
-docker compose -f compose.prod.yaml ps ais-consumer
-docker compose -f compose.prod.yaml logs ais-consumer --tail=100
+docker compose ps ais-consumer
+docker compose logs ais-consumer --tail=100
 ```
 
 Inspect the AIS source status written to Redis:
 
 ```sh
-docker compose -f compose.prod.yaml exec redis redis-cli GET live:ais:status
+docker compose exec redis redis-cli GET live:ais:status
 ```
 
 Expected result: JSON with `source` set to `aisstream` and a status such as
@@ -206,7 +220,7 @@ Expected result: JSON with `source` set to `aisstream` and a status such as
 Check the live vessel index:
 
 ```sh
-docker compose -f compose.prod.yaml exec redis redis-cli SCARD live:vessels
+docker compose exec redis redis-cli SCARD live:vessels
 ```
 
 Then check the API snapshot through nginx:
@@ -250,8 +264,8 @@ Missing tunnel credentials:
 CLOUDFLARED_TUNNEL_TOKEN is required
 ```
 
-Add `CLOUDFLARED_TUNNEL_TOKEN` to the uncommitted `.env` file. In Cloudflare,
-confirm the public hostname route points to `http://nginx:80`.
+Add `CLOUDFLARED_TUNNEL_TOKEN` to the Ansible secret source and redeploy. In
+Cloudflare, confirm the public hostname route points to `http://nginx:80`.
 
 Missing AISStream API key:
 
@@ -259,13 +273,14 @@ Missing AISStream API key:
 AISSTREAM_API_KEY is required
 ```
 
-Add `AISSTREAM_API_KEY` to `.env`, then restart `ais-consumer`.
+Add `AISSTREAM_API_KEY` to the Ansible secret source, redeploy, then restart
+`ais-consumer` if needed.
 
 Backend startup failures:
 
 ```sh
-docker compose -f compose.prod.yaml logs backend
-docker compose -f compose.prod.yaml ps db redis
+docker compose logs backend
+docker compose ps db redis
 ```
 
 Look for migration errors, missing Postgres variables, or unhealthy `db` and
@@ -273,8 +288,8 @@ Look for migration errors, missing Postgres variables, or unhealthy `db` and
 
 Empty live vessel snapshots:
 
-- Check `docker compose -f compose.prod.yaml logs ais-consumer --tail=100`.
-- Check `docker compose -f compose.prod.yaml exec redis redis-cli GET live:ais:status`.
+- Check `docker compose logs ais-consumer --tail=100`.
+- Check `docker compose exec redis redis-cli GET live:ais:status`.
 - Confirm `AISSTREAM_BOUNDING_BOXES` covers the expected area.
 - Confirm AISStream is returning `PositionReport` messages.
 - Empty `items` can be normal before the first renderable vessel message.

@@ -22,10 +22,10 @@ http://nginx:80
 Cloudflare terminates public TLS. The tunnel forwards plain HTTP to the private
 nginx service on the Docker network.
 
-## Local environment
+## Deployment environment
 
-Store the tunnel token outside committed source files. For local Compose usage,
-put it in an uncommitted `.env` file:
+Store the tunnel token outside committed source files. Production deploys render
+it through Ansible into `/srv/azitrax/.env` as:
 
 ```sh
 CLOUDFLARED_TUNNEL_TOKEN=<token copied from Cloudflare>
