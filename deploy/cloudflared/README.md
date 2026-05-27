@@ -24,8 +24,10 @@ nginx service on the Docker network.
 
 ## Deployment environment
 
-Store the tunnel token outside committed source files. Production deploys render
-it through Ansible into `/srv/azitrax/.env` as:
+Store the tunnel token outside committed source files. For manual deploys, keep
+the bootstrap secret in `kubernetes-playground/vars/secrets.yml` as
+`azitrax_cloudflare_tunnel_token_secret`. Production deploys render it through
+Ansible into `/srv/azitrax/.env` as:
 
 ```sh
 CLOUDFLARED_TUNNEL_TOKEN=<token copied from Cloudflare>

@@ -35,10 +35,15 @@ On the production mini PC:
 
 Production environment values are rendered by Ansible into
 `/srv/azitrax/.env` on every deploy. Do not hand-edit that generated file to fix
-drift. Set the source values in the Ansible variables or secrets used by
-`kubernetes-playground/playbooks/deploy-vector.yml`.
+drift.
 
-Required secret values:
+Use these sources of truth:
+
+- Non-secret deploy config: `kubernetes-playground/vars/azitrax.yml`.
+- Manual-deploy bootstrap secrets: `kubernetes-playground/vars/secrets.yml`.
+- Vault-backed deploy secrets: variables named with the `vault_azitrax_` prefix.
+
+Required generated values:
 
 ```sh
 CLOUDFLARED_TUNNEL_TOKEN=<Cloudflare Tunnel token>
@@ -47,8 +52,9 @@ POSTGRES_PASSWORD=<production database password>
 FRONTEND_ORIGINS=https://<public app hostname>
 ```
 
-`FRONTEND_ORIGINS` is used by the backend CORS middleware. In production it
-should be the public frontend origin only, for example:
+`FRONTEND_ORIGINS` is generated from the non-secret `azitrax_public_origin`
+variable and used by the backend CORS middleware. In production it should be the
+public frontend origin only, for example:
 
 ```sh
 FRONTEND_ORIGINS=https://azitrax.com
@@ -57,11 +63,12 @@ FRONTEND_ORIGINS=https://azitrax.com
 Do not commit production secrets, tunnel tokens, API tokens, database passwords,
 generated `.env` files, or generated Cloudflare credential files.
 
-`compose.prod.yaml` defaults new production Compose projects and databases to
-`azitrax`. If this host already has a PostGIS volume initialized with the old
-`vector` project, database, or user names, keep temporary Ansible variable
-overrides pointing at those old names until you migrate, or create the `azitrax`
-database/user and move the data before removing those compatibility overrides.
+`vars/azitrax.yml` defaults new production Compose projects and databases to
+`azitrax`, and Ansible writes those values into `/srv/azitrax/.env`. If this
+host already has a PostGIS volume initialized with the old `vector` project,
+database, or user names, keep temporary Ansible variable overrides pointing at
+those old names until you migrate, or create the `azitrax` database/user and
+move the data before removing those compatibility overrides.
 
 ## Cloudflare Tunnel
 
@@ -70,7 +77,8 @@ Create or attach a remotely managed Cloudflare Tunnel:
 1. In Cloudflare, create a tunnel for this app.
 2. Choose the Docker connector setup and copy the tunnel token.
 3. Store that token in the Ansible secret value rendered as
-   `CLOUDFLARED_TUNNEL_TOKEN`.
+   `CLOUDFLARED_TUNNEL_TOKEN`. For manual deploys, use
+   `azitrax_cloudflare_tunnel_token_secret` in `vars/secrets.yml`.
 4. Add a public hostname route for the production hostname.
 5. Set the route service URL to:
 
@@ -273,8 +281,8 @@ Missing AISStream API key:
 AISSTREAM_API_KEY is required
 ```
 
-Add `AISSTREAM_API_KEY` to the Ansible secret source, redeploy, then restart
-`ais-consumer` if needed.
+Add `azitrax_aisstream_api_key_secret` to the Ansible secret source, redeploy,
+then restart `ais-consumer` if needed.
 
 Backend startup failures:
 
