@@ -193,7 +193,7 @@ curl -fsS "$APP_ORIGIN/api/health"
 Expected result:
 
 ```json
-{"status":"ok"}
+{ "status": "ok" }
 ```
 
 Check database and Redis connectivity through the same ingress path:
@@ -268,8 +268,6 @@ AIS_ALLOW_FIXTURE_FALLBACK=false
 POSTGRES_HOST=db
 POSTGRES_PORT=5432
 REDIS_URL=redis://redis:6379/0
-VITE_API_BASE_URL=/api
-VITE_API_PROXY_TARGET=http://backend:8000
 ```
 
 Redis is private to the Docker network and ephemeral. PostGIS data is stored in
