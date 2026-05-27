@@ -1,7 +1,7 @@
 # Production Deploy and Smoke Test
 
 This is the production deployment flow for running Azitrax on one machine with
-Docker Compose, Ansible, and Cloudflare Tunnel.
+GitHub Actions, Docker Compose, and Cloudflare Tunnel.
 
 Production ingress is:
 
@@ -24,50 +24,62 @@ network services and do not publish host ports.
 On the production mini PC:
 
 - Docker Engine or Docker Desktop with the Docker Compose plugin.
-- Git access to this repository.
+- SSH access from the GitHub Actions deploy workflow.
 - `curl` for smoke tests.
 - Outbound HTTPS and DNS access. No inbound router port forwarding is required.
 - A Cloudflare account with a domain or subdomain for the app.
 - An AISStream API key.
 - Enough local disk for Docker images and the PostGIS Docker volume.
 
-## Required Environment
+## GitHub Environment
 
-Production environment values are rendered by Ansible into
+Production application deploys use the GitHub Environment named `production`.
+GitHub Environment values are rendered by the deploy workflow into
 `/srv/azitrax/.env` on every deploy. Do not hand-edit that generated file to fix
 drift.
 
-Use these sources of truth:
+Create these `production` environment secrets:
 
-- Non-secret deploy config: `kubernetes-playground/vars/azitrax.yml`.
-- Manual-deploy bootstrap secrets: `kubernetes-playground/vars/secrets.yml`.
-- Vault-backed deploy secrets: variables named with the `vault_azitrax_` prefix.
+- `AZITRAX_CLOUDFLARED_TUNNEL_TOKEN`
+- `AZITRAX_POSTGRES_PASSWORD`
+- `AZITRAX_AISSTREAM_API_KEY`
+- `TAILSCALE_AUTHKEY`
+- `AZITRAX_DEPLOY_SSH_PRIVATE_KEY`
+- `GHCR_USERNAME` and `GHCR_TOKEN` if the production host needs credentials to
+  pull private GHCR images
 
-Required generated values:
+Create these `production` environment variables:
+
+- `AZITRAX_IMAGE_TAG`
+- `AZITRAX_PUBLIC_ORIGIN`
+- `AZITRAX_POSTGRES_DB`
+- `AZITRAX_POSTGRES_USER`
+- `AZITRAX_DEPLOY_HOST`
+- `AZITRAX_DEPLOY_SSH_USER`
+- `AZITRAX_DEPLOY_DIR`
+
+Expected values for this deployment:
 
 ```sh
-CLOUDFLARED_TUNNEL_TOKEN=<Cloudflare Tunnel token>
-AISSTREAM_API_KEY=<AISStream API key>
-POSTGRES_PASSWORD=<production database password>
-FRONTEND_ORIGINS=https://<public app hostname>
+AZITRAX_IMAGE_TAG=develop
+AZITRAX_PUBLIC_ORIGIN=https://azitrax.com
+AZITRAX_POSTGRES_DB=azitrax
+AZITRAX_POSTGRES_USER=azitrax
+AZITRAX_DEPLOY_HOST=100.99.9.7
+AZITRAX_DEPLOY_DIR=/srv/azitrax
 ```
 
-`FRONTEND_ORIGINS` is generated from the non-secret `azitrax_public_origin`
-variable and used by the backend CORS middleware. In production it should be the
-public frontend origin only, for example:
-
-```sh
-FRONTEND_ORIGINS=https://azitrax.com
-```
+Set `AZITRAX_DEPLOY_SSH_USER` to the Linux user that can SSH to the production
+host, write to `AZITRAX_DEPLOY_DIR`, and run Docker Compose. The workflow uses a
+GitHub-hosted runner that joins the Tailnet with `TAILSCALE_AUTHKEY`, then SSHes
+to `AZITRAX_DEPLOY_HOST`.
 
 Do not commit production secrets, tunnel tokens, API tokens, database passwords,
 generated `.env` files, or generated Cloudflare credential files.
 
-`vars/azitrax.yml` defaults new production Compose projects and databases to
-`azitrax`, and Ansible writes those values into `/srv/azitrax/.env`. If this
-host already has a PostGIS volume initialized with the old `vector` project,
-database, or user names, keep temporary Ansible variable overrides pointing at
-those old names until you migrate, or create the `azitrax` database/user and
+If this host already has a PostGIS volume initialized with the old `vector`
+project, database, or user names, set the GitHub Environment database variables
+to those old names until you migrate, or create the `azitrax` database/user and
 move the data before removing those compatibility overrides.
 
 ## Cloudflare Tunnel
@@ -76,9 +88,8 @@ Create or attach a remotely managed Cloudflare Tunnel:
 
 1. In Cloudflare, create a tunnel for this app.
 2. Choose the Docker connector setup and copy the tunnel token.
-3. Store that token in the Ansible secret value rendered as
-   `CLOUDFLARED_TUNNEL_TOKEN`. For manual deploys, use
-   `azitrax_cloudflare_tunnel_token_secret` in `vars/secrets.yml`.
+3. Store that token in the GitHub Environment secret
+   `AZITRAX_CLOUDFLARED_TUNNEL_TOKEN`.
 4. Add a public hostname route for the production hostname.
 5. Set the route service URL to:
 
@@ -94,15 +105,20 @@ See `deploy/cloudflared/README.md` for the focused tunnel credential notes.
 ## Deploy, Stop, and Inspect
 
 `compose.prod.yaml` is the only production Compose source in this repository.
-Ansible copies it to the server as `/srv/azitrax/compose.yaml`, alongside the
-generated `/srv/azitrax/.env` and nginx gateway config.
+The GitHub Actions workflow copies it to the server as
+`/srv/azitrax/compose.yaml`, alongside the generated `/srv/azitrax/.env` and
+nginx gateway config.
 
-Deploy from the Ansible workspace:
+Deploy from GitHub:
 
-```sh
-cd ../kubernetes-playground
-ansible-playbook playbooks/deploy-vector.yml
-```
+1. Open the `Deploy Production` workflow.
+2. Choose `Run workflow`.
+3. Select the branch to deploy.
+4. Approve the `production` environment gate if one is configured.
+
+The workflow joins Tailscale, configures SSH, uploads the deploy bundle, runs
+`docker compose pull`, runs `docker compose up -d --remove-orphans`, and checks
+backend health inside the backend container.
 
 Inspect service state on the production host:
 
@@ -243,13 +259,17 @@ AISStream sends renderable messages inside the configured bounding box, but
 
 ## Production Defaults
 
-The production stack sets:
+The GitHub Actions workflow generates these stable production values:
 
 ```sh
+COMPOSE_PROJECT_NAME=azitrax
 AIS_SOURCE=aisstream
 AIS_ALLOW_FIXTURE_FALLBACK=false
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
 REDIS_URL=redis://redis:6379/0
 VITE_API_BASE_URL=/api
+VITE_API_PROXY_TARGET=http://backend:8000
 ```
 
 Redis is private to the Docker network and ephemeral. PostGIS data is stored in
@@ -272,8 +292,8 @@ Missing tunnel credentials:
 CLOUDFLARED_TUNNEL_TOKEN is required
 ```
 
-Add `CLOUDFLARED_TUNNEL_TOKEN` to the Ansible secret source and redeploy. In
-Cloudflare, confirm the public hostname route points to `http://nginx:80`.
+Add `AZITRAX_CLOUDFLARED_TUNNEL_TOKEN` to the GitHub Environment and redeploy.
+In Cloudflare, confirm the public hostname route points to `http://nginx:80`.
 
 Missing AISStream API key:
 
@@ -281,8 +301,17 @@ Missing AISStream API key:
 AISSTREAM_API_KEY is required
 ```
 
-Add `azitrax_aisstream_api_key_secret` to the Ansible secret source, redeploy,
-then restart `ais-consumer` if needed.
+Add `AZITRAX_AISSTREAM_API_KEY` to the GitHub Environment, redeploy, then
+restart `ais-consumer` if needed.
+
+GitHub deploy cannot reach the host:
+
+- Confirm `TAILSCALE_AUTHKEY` is valid and can join the Tailnet.
+- Confirm `AZITRAX_DEPLOY_HOST` is the Tailscale IP for the production host.
+- Confirm `AZITRAX_DEPLOY_SSH_PRIVATE_KEY` matches an authorized public key for
+  `AZITRAX_DEPLOY_SSH_USER`.
+- Confirm the deploy SSH user can write to `AZITRAX_DEPLOY_DIR` and run
+  `docker compose`.
 
 Backend startup failures:
 
@@ -310,7 +339,13 @@ The production stack intentionally does not include:
 - Test database initialization.
 - Vite dev server.
 - Public host ports for backend, PostGIS, or Redis.
-- CI/CD automation.
 - Backup or restore automation.
 - Alerting or centralized logging.
 - Host provisioning automation.
+
+## Manual Fallback
+
+The old Ansible deploy path can remain as a manual fallback until the GitHub
+Actions path has been smoke-tested. Local fallback secrets live in
+`kubernetes-playground/vars/secrets.yml`; do not treat that file as the
+preferred production secret source.
