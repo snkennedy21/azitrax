@@ -134,11 +134,6 @@ jobs:
               "AISSTREAM_DISABLE_TLS_VERIFY",
               "AIS_CONSUMER_POLL_SECONDS",
               "AIS_CONSUMER_RECONNECT_BACKOFF_SECONDS",
-<<<<<<< HEAD
-=======
-              "VITE_API_BASE_URL",
-              "VITE_API_PROXY_TARGET",
->>>>>>> main
           ]
 
           def quote(value):
