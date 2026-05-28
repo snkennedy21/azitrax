@@ -12,7 +12,7 @@ Create a tunnel in the Cloudflare dashboard:
 1. Go to **Zero Trust** or **Networking** > **Tunnels**.
 2. Create a Cloudflare Tunnel for this app.
 3. Choose the Docker connector setup and copy only the tunnel token value.
-4. Add a public hostname route for the app.
+4. Add a public hostname route for `azitrax.com`.
 5. Set the route service URL to:
 
 ```text
@@ -21,6 +21,10 @@ http://nginx:80
 
 Cloudflare terminates public TLS. The tunnel forwards plain HTTP to the private
 nginx service on the Docker network.
+
+Enable HTTPS enforcement in Cloudflare for `azitrax.com`. The production host
+does not need inbound router port forwarding, and Azitrax services should not be
+published on local host ports for public access.
 
 ## Deployment environment
 
