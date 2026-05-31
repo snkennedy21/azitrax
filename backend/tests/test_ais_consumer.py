@@ -4,17 +4,17 @@ from datetime import timezone
 
 import pytest
 
-from app.ais_consumer import AisConsumerConfig
-from app.ais_consumer import process_aisstream_message
-from app.ais_consumer import run_consumer
-from app.ais_consumer import upsert_live_vessel_records
-from app.ais_consumer import write_source_status
-from app.ais_source import AisSourceConfig
-from app.cache import LIVE_AIS_STATUS_KEY
-from app.cache import LIVE_VESSEL_EXPIRE_AFTER_SECONDS
-from app.cache import LIVE_VESSELS_INDEX_KEY
-from app.cache import deserialize_cached_live_vessel
-from app.cache import live_vessel_key
+from app.ais.consumer import process_aisstream_message
+from app.ais.consumer import run_consumer
+from app.ais.consumer import upsert_live_vessel_records
+from app.ais.consumer import write_source_status
+from app.cache.redis import LIVE_AIS_STATUS_KEY
+from app.cache.redis import LIVE_VESSEL_EXPIRE_AFTER_SECONDS
+from app.cache.redis import LIVE_VESSELS_INDEX_KEY
+from app.cache.redis import deserialize_cached_live_vessel
+from app.cache.redis import live_vessel_key
+from app.config import AisConsumerConfig
+from app.config import AisSourceConfig
 from app.schemas.vessels import AisVesselRecord
 
 

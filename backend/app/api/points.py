@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from fastapi import HTTPException
 from psycopg import Error as PsycopgError
 
-from app.database import DbConnection
+from app.db.connection import DbConnection
 from app.schemas.points import PointCreate
 from app.schemas.points import PointListItem
 from app.schemas.points import PointResponse

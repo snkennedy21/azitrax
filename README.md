@@ -62,7 +62,7 @@ For offline development, switch `.env` to the local AIS fixture:
 
 ```sh
 AIS_SOURCE=fixture
-AIS_FIXTURE_PATH=/app/app/fixtures/aisstream-position-reports-sample.json
+AIS_FIXTURE_PATH=/app/app/ais/fixtures/aisstream-position-reports-sample.json
 AIS_ALLOW_FIXTURE_FALLBACK=true
 ```
 

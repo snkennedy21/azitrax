@@ -1,46 +1,27 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone
 import json
-import os
 import signal
 import ssl
 from typing import Any
 
-from app.ais_source import AisSourceConfig
-from app.ais_source import AisSourceError
-from app.ais_source import DEFAULT_BOUNDING_BOXES
-from app.ais_source import load_ais_vessel_records
-from app.cache import create_redis_client
-from app.cache import deserialize_cached_live_vessel
-from app.cache import LIVE_AIS_STATUS_KEY
-from app.cache import LIVE_VESSEL_EXPIRE_AFTER_SECONDS
-from app.cache import LIVE_VESSELS_INDEX_KEY
-from app.cache import live_vessel_key
-from app.cache import serialize_cached_live_vessel
+from app.ais.source import AisSourceError
+from app.ais.source import DEFAULT_BOUNDING_BOXES
+from app.ais.source import load_ais_vessel_records
+from app.config import AisConsumerConfig
+from app.config import AisSourceConfig
+from app.cache.redis import create_redis_client
+from app.cache.redis import deserialize_cached_live_vessel
+from app.cache.redis import LIVE_AIS_STATUS_KEY
+from app.cache.redis import LIVE_VESSEL_EXPIRE_AFTER_SECONDS
+from app.cache.redis import LIVE_VESSELS_INDEX_KEY
+from app.cache.redis import live_vessel_key
+from app.cache.redis import serialize_cached_live_vessel
 from app.schemas.vessels import AisVesselRecord
 from app.schemas.vessels import CachedLiveVessel
-
-
-@dataclass(frozen=True)
-class AisConsumerConfig:
-    poll_seconds: float = 60.0
-    run_once: bool = False
-    reconnect_backoff_seconds: float = 5.0
-
-    @classmethod
-    def from_env(cls) -> AisConsumerConfig:
-        return cls(
-            poll_seconds=max(0.1, float(os.getenv("AIS_CONSUMER_POLL_SECONDS", "60"))),
-            run_once=_parse_bool(os.getenv("AIS_CONSUMER_RUN_ONCE", "false")),
-            reconnect_backoff_seconds=max(
-                0.1,
-                float(os.getenv("AIS_CONSUMER_RECONNECT_BACKOFF_SECONDS", "5")),
-            ),
-        )
 
 
 async def run_consumer(
@@ -419,10 +400,6 @@ def _install_signal_handlers(stop_event: asyncio.Event) -> None:
             loop.add_signal_handler(signal_name, stop_event.set)
         except NotImplementedError:
             signal.signal(signal_name, lambda *_: stop_event.set())
-
-
-def _parse_bool(value: str) -> bool:
-    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 if __name__ == "__main__":

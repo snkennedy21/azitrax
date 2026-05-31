@@ -1,6 +1,5 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,10 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.health import router as health_router
 from app.api.live_vessels import router as live_vessels_router
 from app.api.points import router as points_router
-from app.cache import create_redis_client
-from app.database import create_pool
-from app.migrations import run_migrations
-from app.migrations import validate_migrations
+from app.cache.redis import create_redis_client
+from app.config import frontend_origins_from_env
+from app.db.connection import create_pool
+from app.db.migrations import run_migrations
+from app.db.migrations import validate_migrations
 
 
 # FastAPI calls this function once when the app starts and resumes it once
@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         print(f"Fatal error during database migrations: {exc}")
         raise
 
-    # Build the pool from environment variables in app.database.DatabaseConfig.
+    # Build the pool from environment variables in app.config.DatabaseConfig.
     # This does not run SQL yet; it prepares a reusable pool of connections.
     db_pool = create_pool()
 
@@ -56,18 +56,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 # Passing lifespan here tells FastAPI to run the startup/shutdown logic above.
 app = FastAPI(title="Azitrax API", lifespan=lifespan)
 
-frontend_origins = [
-    origin.strip()
-    for origin in os.getenv(
-        "FRONTEND_ORIGINS",
-        "http://127.0.0.1:5173,http://localhost:5173",
-    ).split(",")
-    if origin.strip()
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=frontend_origins,
+    allow_origins=frontend_origins_from_env(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

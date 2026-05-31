@@ -23,7 +23,8 @@ from fastapi.testclient import TestClient
 from psycopg import Connection
 from psycopg_pool import ConnectionPool
 
-from app.database import create_pool, DatabaseConfig
+from app.config import DatabaseConfig
+from app.db.connection import create_pool
 from app.main import app
 
 

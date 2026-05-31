@@ -2,9 +2,9 @@ from fastapi import APIRouter
 from fastapi import HTTPException
 from psycopg import Error as PsycopgError
 
-from app.cache import check_redis_connection
-from app.cache import RedisClient
-from app.database import DbConnection
+from app.cache.redis import check_redis_connection
+from app.cache.redis import RedisClient
+from app.db.connection import DbConnection
 
 
 router = APIRouter()
@@ -20,7 +20,7 @@ def health() -> dict[str, str]:
 @router.get("/health/db")
 def database_health(db: DbConnection) -> dict[str, str]:
     # db is provided by FastAPI dependency injection. The DbConnection type
-    # points to app.database.get_db_connection, which borrows one connection
+    # points to app.db.connection.get_db_connection, which borrows one connection
     # from the pool for this request and returns it afterward.
     try:
         # psycopg v3 lets a connection execute SQL directly. It returns a
@@ -35,7 +35,7 @@ def database_health(db: DbConnection) -> dict[str, str]:
     if row is None:
         raise HTTPException(status_code=503, detail="database unavailable")
 
-    # Rows come back dict-like because database.py configured row_factory=dict_row.
+    # Rows come back dict-like because db.connection configured row_factory=dict_row.
     return {"status": "ok", "postgis_version": row["postgis_version"]}
 
 

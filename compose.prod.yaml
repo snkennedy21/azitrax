@@ -2,7 +2,7 @@ name: ${COMPOSE_PROJECT_NAME}
 
 x-ais-environment: &ais-environment
   AIS_SOURCE: aisstream
-  AIS_FIXTURE_PATH: /app/app/fixtures/aisstream-position-reports-sample.json
+  AIS_FIXTURE_PATH: /app/app/ais/fixtures/aisstream-position-reports-sample.json
   AIS_ALLOW_FIXTURE_FALLBACK: "false"
   AISSTREAM_WS_URL: "${AISSTREAM_WS_URL}"
   AISSTREAM_API_KEY: "${AISSTREAM_API_KEY:?AISSTREAM_API_KEY is required}"
@@ -58,7 +58,7 @@ services:
 
   ais-consumer:
     image: "${AZITRAX_BACKEND_IMAGE}:${AZITRAX_IMAGE_TAG}"
-    command: python -m app.ais_consumer
+    command: python -m app.ais.consumer
     environment:
       <<: *ais-environment
       AIS_CONSUMER_POLL_SECONDS: "${AIS_CONSUMER_POLL_SECONDS}"
