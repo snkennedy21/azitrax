@@ -62,7 +62,7 @@ For offline development, switch `.env` to the local AIS fixture:
 
 ```sh
 AIS_SOURCE=fixture
-AIS_FIXTURE_PATH=/app/app/fixtures/aisstream-position-reports-sample.json
+AIS_FIXTURE_PATH=/app/app/ais/fixtures/aisstream-position-reports-sample.json
 AIS_ALLOW_FIXTURE_FALLBACK=true
 ```
 
@@ -129,8 +129,9 @@ project and database/user names until you migrate or recreate the local volume.
 ## Source Discovery
 
 The live external source is AIS vessel position data from AISStream at
-`wss://stream.aisstream.io/v0/stream`. For offline development, switch
-`AIS_SOURCE` to `fixture` in `.env`.
+`wss://stream.aisstream.io/v0/stream`. Local development defaults to
+`AIS_SOURCE=aisstream`; for offline development, switch `AIS_SOURCE` to
+`fixture` in `.env`.
 
 See [docs/source-discovery.md](docs/source-discovery.md) for the source decision,
 authentication expectations, known rate-limit and availability constraints,

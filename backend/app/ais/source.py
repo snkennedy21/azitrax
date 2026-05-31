@@ -2,52 +2,21 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-from dataclasses import dataclass
 import json
-import os
-from pathlib import Path
 import ssl
 from typing import Any
 
-from app.schemas import AisVesselRecord
-from app.schemas import LiveVesselMapItem
+from app.config import AisSourceConfig
+from app.config import DEFAULT_AIS_BOUNDING_BOXES
+from app.schemas.vessels import AisVesselRecord
+from app.schemas.vessels import LiveVesselMapItem
 
 
-DEFAULT_BOUNDING_BOXES = [[[40.4774, -74.2591], [40.9176, -73.7004]]]
-DEFAULT_FIXTURE_PATH = Path(__file__).resolve().parent / "fixtures/aisstream-position-reports-sample.json"
+DEFAULT_BOUNDING_BOXES = DEFAULT_AIS_BOUNDING_BOXES
 
 
 class AisSourceError(RuntimeError):
     """Raised when the configured AIS source cannot provide records."""
-
-
-@dataclass(frozen=True)
-class AisSourceConfig:
-    source: str = "fixture"
-    fixture_path: Path = DEFAULT_FIXTURE_PATH
-    allow_fixture_fallback: bool = True
-    aisstream_ws_url: str = "wss://stream.aisstream.io/v0/stream"
-    aisstream_api_key: str | None = None
-    aisstream_bounding_boxes: list[Any] | None = None
-    aisstream_message_types: list[str] | None = None
-    aisstream_connect_timeout_seconds: float = 30.0
-    aisstream_sample_message_limit: int = 50
-    aisstream_disable_tls_verify: bool = False
-
-    @classmethod
-    def from_env(cls) -> AisSourceConfig:
-        return cls(
-            source=os.getenv("AIS_SOURCE", "fixture").strip().lower(),
-            fixture_path=_resolve_path(os.getenv("AIS_FIXTURE_PATH"), DEFAULT_FIXTURE_PATH),
-            allow_fixture_fallback=_parse_bool(os.getenv("AIS_ALLOW_FIXTURE_FALLBACK", "true")),
-            aisstream_ws_url=os.getenv("AISSTREAM_WS_URL", "wss://stream.aisstream.io/v0/stream"),
-            aisstream_api_key=os.getenv("AISSTREAM_API_KEY") or None,
-            aisstream_bounding_boxes=_parse_json_env("AISSTREAM_BOUNDING_BOXES", DEFAULT_BOUNDING_BOXES),
-            aisstream_message_types=_parse_csv_env("AISSTREAM_MESSAGE_TYPES", ["PositionReport"]),
-            aisstream_connect_timeout_seconds=float(os.getenv("AISSTREAM_CONNECT_TIMEOUT_SECONDS", "30")),
-            aisstream_sample_message_limit=max(1, int(os.getenv("AISSTREAM_SAMPLE_MESSAGE_LIMIT", "50"))),
-            aisstream_disable_tls_verify=_parse_aisstream_disable_tls_verify(),
-        )
 
 
 class AisSourceClient:
@@ -186,48 +155,6 @@ def _default_ws_connect(url: str, open_timeout: float, **kwargs: Any) -> Any:
         raise AisSourceError("websockets is required for AIS_SOURCE=aisstream") from exc
 
     return websockets.connect(url, open_timeout=open_timeout, **kwargs)
-
-
-def _parse_bool(value: str) -> bool:
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
-def _parse_aisstream_disable_tls_verify() -> bool:
-    return _parse_bool(os.getenv("AISSTREAM_DISABLE_TLS_VERIFY", "false"))
-
-
-def _parse_csv_env(name: str, default: list[str]) -> list[str]:
-    raw_value = os.getenv(name)
-    if raw_value is None:
-        return default
-    return [part.strip() for part in raw_value.split(",") if part.strip()]
-
-
-def _parse_json_env(name: str, default: list[Any]) -> list[Any]:
-    raw_value = os.getenv(name)
-    if raw_value is None:
-        return default
-    try:
-        parsed = json.loads(raw_value)
-    except json.JSONDecodeError as exc:
-        raise AisSourceError(f"{name} must be valid JSON") from exc
-    if not isinstance(parsed, list):
-        raise AisSourceError(f"{name} must be a JSON array")
-    return parsed
-
-
-def _resolve_path(raw_path: str | None, default: Path) -> Path:
-    if not raw_path:
-        return default
-
-    path = Path(raw_path)
-    if path.is_absolute():
-        if path.exists():
-            return path
-        if path.name == default.name and default.exists():
-            return default
-        return path
-    return Path(__file__).resolve().parents[2] / path
 
 
 def _looks_like_source_error(message: dict[str, Any]) -> bool:

@@ -3,14 +3,14 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from app.cache import LIVE_VESSELS_INDEX_KEY
-from app.cache import LIVE_AIS_STATUS_KEY
-from app.cache import LIVE_VESSEL_EXPIRE_AFTER_SECONDS
-from app.cache import LIVE_VESSEL_STALE_AFTER_SECONDS
-from app.cache import deserialize_cached_live_vessel
-from app.cache import live_vessel_key
-from app.cache import serialize_cached_live_vessel
-from app.schemas import CachedLiveVessel
+from app.cache.redis import LIVE_VESSELS_INDEX_KEY
+from app.cache.redis import LIVE_AIS_STATUS_KEY
+from app.cache.redis import LIVE_VESSEL_EXPIRE_AFTER_SECONDS
+from app.cache.redis import LIVE_VESSEL_STALE_AFTER_SECONDS
+from app.cache.redis import deserialize_cached_live_vessel
+from app.cache.redis import live_vessel_key
+from app.cache.redis import serialize_cached_live_vessel
+from app.schemas.vessels import CachedLiveVessel
 
 
 def valid_cached_vessel_payload() -> dict[str, object]:

@@ -3,14 +3,14 @@ from pathlib import Path
 
 import pytest
 
-from app.ais_source import AisSourceClient
-from app.ais_source import AisSourceConfig
-from app.ais_source import map_live_vessel_items
-from app.schemas import AisVesselRecord
+from app.ais.source import AisSourceClient
+from app.ais.source import map_live_vessel_items
+from app.config import AisSourceConfig
+from app.schemas.vessels import AisVesselRecord
 
 
 def fixture_path() -> Path:
-    return Path(__file__).resolve().parents[1] / "app/fixtures/aisstream-position-reports-sample.json"
+    return Path(__file__).resolve().parents[1] / "app/ais/fixtures/aisstream-position-reports-sample.json"
 
 
 @pytest.mark.asyncio

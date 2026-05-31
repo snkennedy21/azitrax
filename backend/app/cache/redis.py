@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-import os
 from typing import Annotated
 from typing import Any
 
@@ -9,7 +7,8 @@ from fastapi import Request
 from redis import Redis
 from redis.exceptions import RedisError
 
-from app.schemas import CachedLiveVessel
+from app.config import RedisConfig
+from app.schemas.vessels import CachedLiveVessel
 
 
 # Live Redis snapshot contract only. These keys are not durable persistence and
@@ -23,15 +22,6 @@ LIVE_VESSELS_INDEX_KEY = "live:vessels"
 LIVE_VESSEL_KEY_PATTERN = "vessel:{mmsi}"
 LIVE_VESSEL_STALE_AFTER_SECONDS = 5 * 60
 LIVE_VESSEL_EXPIRE_AFTER_SECONDS = 30 * 60
-
-
-@dataclass(frozen=True)
-class RedisConfig:
-    redis_url: str
-
-    @classmethod
-    def from_env(cls) -> "RedisConfig":
-        return cls(redis_url=os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0"))
 
 
 def create_redis_client(config: RedisConfig | None = None) -> Redis:

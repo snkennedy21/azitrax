@@ -1,39 +1,17 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
-import os
-from typing import Any
 
 from fastapi import FastAPI
-from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from psycopg import Error as PsycopgError
-from pydantic import ValidationError
-from redis.exceptions import RedisError
 
-from app.ais_source import AisSourceConfig
-from app.ais_source import DEFAULT_BOUNDING_BOXES
-from app.ais_consumer import read_source_status
-from app.cache import check_redis_connection
-from app.cache import create_redis_client
-from app.cache import deserialize_cached_live_vessel
-from app.cache import LIVE_VESSEL_STALE_AFTER_SECONDS
-from app.cache import LIVE_VESSELS_INDEX_KEY
-from app.cache import live_vessel_key
-from app.cache import RedisClient
-from app.database import create_pool
-from app.database import DbConnection
-from app.migrations import run_migrations
-from app.migrations import validate_migrations
-from app.schemas import CachedLiveVessel
-from app.schemas import LiveVesselMapItem
-from app.schemas import LiveVesselsMetadata
-from app.schemas import LiveVesselsResponse
-from app.schemas import PointCreate
-from app.schemas import PointListItem
-from app.schemas import PointResponse
+from app.api.health import router as health_router
+from app.api.live_vessels import router as live_vessels_router
+from app.api.points import router as points_router
+from app.cache.redis import create_redis_client
+from app.config import frontend_origins_from_env
+from app.db.connection import create_pool
+from app.db.migrations import run_migrations
+from app.db.migrations import validate_migrations
 
 
 # FastAPI calls this function once when the app starts and resumes it once
@@ -52,7 +30,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         print(f"Fatal error during database migrations: {exc}")
         raise
 
-    # Build the pool from environment variables in app.database.DatabaseConfig.
+    # Build the pool from environment variables in app.config.DatabaseConfig.
     # This does not run SQL yet; it prepares a reusable pool of connections.
     db_pool = create_pool()
 
@@ -78,250 +56,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 # Passing lifespan here tells FastAPI to run the startup/shutdown logic above.
 app = FastAPI(title="Azitrax API", lifespan=lifespan)
 
-frontend_origins = [
-    origin.strip()
-    for origin in os.getenv(
-        "FRONTEND_ORIGINS",
-        "http://127.0.0.1:5173,http://localhost:5173",
-    ).split(",")
-    if origin.strip()
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=frontend_origins,
+    allow_origins=frontend_origins_from_env(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-@app.get("/health")
-def health() -> dict[str, str]:
-    # This endpoint only proves the HTTP server is alive.
-    # It does not touch Postgres.
-    return {"status": "ok"}
-
-
-@app.get("/live/vessels")
-def get_live_vessels(redis_client: RedisClient) -> LiveVesselsResponse:
-    fetched_at = datetime.now(timezone.utc)
-    try:
-        source_status = read_source_status(redis_client)
-        source, bounding_boxes = _live_snapshot_config(source_status)
-        raw_ids = redis_client.smembers(LIVE_VESSELS_INDEX_KEY)
-        vessel_ids = _normalize_vessel_ids(raw_ids)
-        cached_vessels = _load_cached_live_vessels(redis_client, vessel_ids)
-    except RedisError as exc:
-        raise HTTPException(status_code=503, detail="redis unavailable") from exc
-
-    items = [_cached_vessel_to_map_item(vessel, fetched_at) for vessel in cached_vessels]
-    return LiveVesselsResponse(
-        items=items,
-        metadata=LiveVesselsMetadata(
-            source=source,
-            fetched_at=fetched_at.isoformat(),
-            known_count=len(vessel_ids),
-            returned_count=len(items),
-            last_message_at=_max_timestamp(vessel.last_message_at for vessel in cached_vessels),
-            oldest_last_seen_at=_min_timestamp(vessel.last_seen_at for vessel in cached_vessels),
-            source_status=source_status or {"source": source, "status": "warming"},
-            bounding_boxes=bounding_boxes,
-        ),
-    )
-
-
-@app.get("/health/db")
-def database_health(db: DbConnection) -> dict[str, str]:
-    # db is provided by FastAPI dependency injection. The DbConnection type
-    # points to app.database.get_db_connection, which borrows one connection
-    # from the pool for this request and returns it afterward.
-    try:
-        # psycopg v3 lets a connection execute SQL directly. It returns a
-        # cursor, and fetchone() reads the first row from that cursor.
-        row = db.execute("SELECT PostGIS_Version() AS postgis_version").fetchone()
-    except PsycopgError as exc:
-        # Translate database-driver errors into a useful HTTP response.
-        raise HTTPException(status_code=503, detail="database unavailable") from exc
-
-    # A SELECT like this should always return one row. If it somehow does not,
-    # treat that the same as an unavailable database.
-    if row is None:
-        raise HTTPException(status_code=503, detail="database unavailable")
-
-    # Rows come back dict-like because database.py configured row_factory=dict_row.
-    return {"status": "ok", "postgis_version": row["postgis_version"]}
-
-
-@app.get("/health/redis")
-def redis_health(redis_client: RedisClient) -> dict[str, str]:
-    check_redis_connection(redis_client)
-    return {"status": "ok"}
-
-
-@app.post("/points", status_code=201)
-def create_point(point: PointCreate, db: DbConnection) -> PointResponse:
-    # PostGIS points are stored as X/Y coordinates. For geographic coordinates,
-    # X is longitude and Y is latitude, so ST_MakePoint must receive lon first.
-    sql = """
-        INSERT INTO points (geom)
-        VALUES (ST_SetSRID(ST_MakePoint(%s, %s), 4326))
-        RETURNING
-            id,
-            ST_Y(geom) AS lat,
-            ST_X(geom) AS lon,
-            ST_SRID(geom) AS srid
-    """
-
-    try:
-        # Parameters are passed separately from the SQL string. psycopg sends
-        # them safely to Postgres instead of interpolating them into the text.
-        row = db.execute(sql, (point.lon, point.lat)).fetchone()
-    except PsycopgError as exc:
-        raise HTTPException(status_code=503, detail="database unavailable") from exc
-
-    if row is None:
-        raise HTTPException(status_code=500, detail="point was not saved")
-
-    return PointResponse(
-        id=row["id"],
-        lat=row["lat"],
-        lon=row["lon"],
-        srid=row["srid"],
-    )
-
-
-@app.get("/points")
-def get_points(db: DbConnection) -> list[PointListItem]:
-    sql = """
-        SELECT
-            id,
-            ST_Y(geom) AS lat,
-            ST_X(geom) AS lon
-        FROM points
-        ORDER BY id
-    """
-
-    try:
-        rows = db.execute(sql).fetchall()
-    except PsycopgError as exc:
-        raise HTTPException(status_code=503, detail="database unavailable") from exc
-
-    return [
-        PointListItem(
-            id=row["id"],
-            lat=row["lat"],
-            lon=row["lon"],
-        )
-        for row in rows
-    ]
-
-
-def _normalize_vessel_ids(raw_ids: set[Any]) -> list[int]:
-    vessel_ids: list[int] = []
-    for raw_id in raw_ids:
-        try:
-            vessel_ids.append(int(raw_id))
-        except (TypeError, ValueError):
-            continue
-
-    return sorted(vessel_ids)
-
-
-def _load_cached_live_vessels(
-    redis_client: Any,
-    vessel_ids: list[int],
-) -> list[CachedLiveVessel]:
-    if not vessel_ids:
-        return []
-
-    keys = [live_vessel_key(vessel_id) for vessel_id in vessel_ids]
-    if hasattr(redis_client, "mget"):
-        payloads = redis_client.mget(keys)
-    else:
-        payloads = [redis_client.get(key) for key in keys]
-
-    vessels: list[CachedLiveVessel] = []
-    stale_index_ids: list[int] = []
-    for vessel_id, payload in zip(vessel_ids, payloads, strict=True):
-        if not payload:
-            stale_index_ids.append(vessel_id)
-            continue
-
-        try:
-            vessel = deserialize_cached_live_vessel(payload)
-        except (TypeError, ValueError, ValidationError):
-            stale_index_ids.append(vessel_id)
-            continue
-
-        vessels.append(vessel)
-
-    _remove_stale_index_ids(redis_client, stale_index_ids)
-    return vessels
-
-
-def _cached_vessel_to_map_item(vessel: CachedLiveVessel, fetched_at: datetime) -> LiveVesselMapItem:
-    return LiveVesselMapItem(
-        id=vessel.id,
-        lat=vessel.lat,
-        lon=vessel.lon,
-        timestamp=vessel.timestamp,
-        last_seen_at=vessel.last_seen_at,
-        freshness=_vessel_freshness(vessel, fetched_at),
-        mmsi=vessel.mmsi,
-        label=vessel.label,
-        course=vessel.course,
-        heading=vessel.heading,
-        speed=vessel.speed,
-        destination=vessel.destination,
-    )
-
-
-def _live_snapshot_config(source_status: dict[str, Any]) -> tuple[str, list[Any]]:
-    try:
-        config = AisSourceConfig.from_env()
-    except (ValueError, RuntimeError):
-        status_source = source_status.get("source")
-        return (status_source if isinstance(status_source, str) else "unknown", DEFAULT_BOUNDING_BOXES)
-
-    status_source = source_status.get("source")
-    source = status_source if isinstance(status_source, str) else config.source
-    return source, config.aisstream_bounding_boxes or DEFAULT_BOUNDING_BOXES
-
-
-def _max_timestamp(values: Any) -> str | None:
-    timestamps = [value for value in values if isinstance(value, str)]
-    return max(timestamps) if timestamps else None
-
-
-def _min_timestamp(values: Any) -> str | None:
-    timestamps = [value for value in values if isinstance(value, str)]
-    return min(timestamps) if timestamps else None
-
-
-def _vessel_freshness(vessel: CachedLiveVessel, fetched_at: datetime) -> str:
-    last_seen_at = _parse_utc_timestamp(vessel.last_seen_at)
-    if last_seen_at is None:
-        return "stale"
-
-    stale_after = timedelta(seconds=LIVE_VESSEL_STALE_AFTER_SECONDS)
-    return "stale" if fetched_at - last_seen_at >= stale_after else "fresh"
-
-
-def _parse_utc_timestamp(value: str) -> datetime | None:
-    try:
-        parsed = datetime.fromisoformat(value)
-    except ValueError:
-        return None
-
-    if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
-
-    return parsed.astimezone(timezone.utc)
-
-
-def _remove_stale_index_ids(redis_client: Any, vessel_ids: list[int]) -> None:
-    if not vessel_ids or not hasattr(redis_client, "srem"):
-        return
-
-    redis_client.srem(LIVE_VESSELS_INDEX_KEY, *vessel_ids)
+app.include_router(health_router)
+app.include_router(live_vessels_router)
+app.include_router(points_router)

@@ -7,12 +7,12 @@ import pytest
 from fastapi.testclient import TestClient
 from redis.exceptions import ConnectionError as RedisConnectionError
 
-from app.ais_consumer import upsert_live_vessel_records
-from app.cache import LIVE_AIS_STATUS_KEY
-from app.cache import LIVE_VESSELS_INDEX_KEY
-from app.cache import live_vessel_key
+from app.ais.consumer import upsert_live_vessel_records
+from app.cache.redis import LIVE_AIS_STATUS_KEY
+from app.cache.redis import LIVE_VESSELS_INDEX_KEY
+from app.cache.redis import live_vessel_key
 from app.main import app
-from app.schemas import AisVesselRecord
+from app.schemas.vessels import AisVesselRecord
 
 
 def test_live_vessels_endpoint_reads_populated_redis_snapshot(
@@ -218,7 +218,7 @@ def test_live_vessels_endpoint_does_not_call_live_ais_source(
     async def fail_load(*args: object, **kwargs: object) -> None:
         raise AssertionError("request path must not load AIS source")
 
-    monkeypatch.setattr("app.ais_source.load_ais_vessel_records", fail_load)
+    monkeypatch.setattr("app.ais.source.load_ais_vessel_records", fail_load)
     monkeypatch.setattr("app.main.load_ais_vessel_records", fail_load, raising=False)
 
     response = client.get("/live/vessels")
