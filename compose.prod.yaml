@@ -103,7 +103,9 @@ services:
     image: cloudflare/cloudflared:2026.5.2
     command: tunnel --no-autoupdate run
     environment:
-      TUNNEL_TOKEN: "${CLOUDFLARED_TUNNEL_TOKEN:?CLOUDFLARED_TUNNEL_TOKEN is required}"
+      TUNNEL_TOKEN_FILE: /run/secrets/cloudflared_tunnel_token
+    secrets:
+      - cloudflared_tunnel_token
     depends_on:
       - nginx
 
@@ -113,5 +115,7 @@ volumes:
 secrets:
   aisstream_api_key:
     file: ./secrets/aisstream_api_key
+  cloudflared_tunnel_token:
+    file: ./secrets/cloudflared_tunnel_token
   postgres_password:
     file: ./secrets/postgres_password
