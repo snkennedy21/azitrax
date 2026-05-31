@@ -99,9 +99,11 @@ jobs:
       - name: Build deploy bundle
         run: |
           set -euo pipefail
-          mkdir -p .deploy
+          mkdir -p .deploy/secrets
           cp compose.prod.yaml .deploy/compose.yaml
           cp deploy/nginx/gateway.conf .deploy/nginx.conf
+          printf '%s' "$POSTGRES_PASSWORD" > .deploy/secrets/postgres_password
+          printf '%s' "$AISSTREAM_API_KEY" > .deploy/secrets/aisstream_api_key
 
           python - <<'PY'
           import os
@@ -117,7 +119,6 @@ jobs:
               "POSTGRES_DB",
               "POSTGRES_HOST",
               "POSTGRES_USER",
-              "POSTGRES_PASSWORD",
               "POSTGRES_PORT",
               "POSTGRES_CONNECT_TIMEOUT",
               "POSTGRES_POOL_MIN_SIZE",
@@ -126,7 +127,6 @@ jobs:
               "REDIS_URL",
               "FRONTEND_ORIGINS",
               "AISSTREAM_WS_URL",
-              "AISSTREAM_API_KEY",
               "AISSTREAM_BOUNDING_BOXES",
               "AISSTREAM_MESSAGE_TYPES",
               "AISSTREAM_CONNECT_TIMEOUT_SECONDS",
@@ -149,7 +149,8 @@ jobs:
           target="$DEPLOY_USER@$DEPLOY_HOST"
           remote_tmp="$(ssh "$target" 'mktemp -d')"
           scp .deploy/compose.yaml .deploy/nginx.conf .deploy/.env "$target:$remote_tmp/"
-          ssh "$target" "mkdir -p '$DEPLOY_DIR' && cp '$remote_tmp/compose.yaml' '$remote_tmp/nginx.conf' '$remote_tmp/.env' '$DEPLOY_DIR/' && chmod 600 '$DEPLOY_DIR/.env' && rm -rf '$remote_tmp'"
+          scp -r .deploy/secrets "$target:$remote_tmp/secrets"
+          ssh "$target" "mkdir -p '$DEPLOY_DIR' && cp '$remote_tmp/compose.yaml' '$remote_tmp/nginx.conf' '$remote_tmp/.env' '$DEPLOY_DIR/' && rm -rf '$DEPLOY_DIR/secrets' && cp -R '$remote_tmp/secrets' '$DEPLOY_DIR/secrets' && chmod 600 '$DEPLOY_DIR/.env' && chmod 700 '$DEPLOY_DIR/secrets' && chmod 600 '$DEPLOY_DIR/secrets/'* && rm -rf '$remote_tmp'"
 
       - name: Log in to GHCR on production host
         if: ${{ env.GHCR_USERNAME != '' && env.GHCR_TOKEN != '' }}

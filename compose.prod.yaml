@@ -5,7 +5,7 @@ x-ais-environment: &ais-environment
   AIS_FIXTURE_PATH: /app/app/ais/fixtures/aisstream-position-reports-sample.json
   AIS_ALLOW_FIXTURE_FALLBACK: "false"
   AISSTREAM_WS_URL: "${AISSTREAM_WS_URL}"
-  AISSTREAM_API_KEY: "${AISSTREAM_API_KEY:?AISSTREAM_API_KEY is required}"
+  AISSTREAM_API_KEY_FILE: /run/secrets/aisstream_api_key
   AISSTREAM_BOUNDING_BOXES: "${AISSTREAM_BOUNDING_BOXES}"
   AISSTREAM_MESSAGE_TYPES: "${AISSTREAM_MESSAGE_TYPES}"
   AISSTREAM_CONNECT_TIMEOUT_SECONDS: "${AISSTREAM_CONNECT_TIMEOUT_SECONDS}"
@@ -18,7 +18,7 @@ x-backend-environment: &backend-environment
   POSTGRES_PORT: "${POSTGRES_PORT}"
   POSTGRES_DB: "${POSTGRES_DB}"
   POSTGRES_USER: "${POSTGRES_USER}"
-  POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+  POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
   POSTGRES_CONNECT_TIMEOUT: "${POSTGRES_CONNECT_TIMEOUT}"
   POSTGRES_POOL_MIN_SIZE: "${POSTGRES_POOL_MIN_SIZE}"
   POSTGRES_POOL_MAX_SIZE: "${POSTGRES_POOL_MAX_SIZE}"
@@ -39,6 +39,9 @@ services:
     image: "${AZITRAX_BACKEND_IMAGE}:${AZITRAX_IMAGE_TAG}"
     environment:
       <<: [*ais-environment, *backend-environment]
+    secrets:
+      - aisstream_api_key
+      - postgres_password
     depends_on:
       db:
         condition: service_healthy
@@ -65,6 +68,8 @@ services:
       AIS_CONSUMER_RUN_ONCE: "false"
       AIS_CONSUMER_RECONNECT_BACKOFF_SECONDS: "${AIS_CONSUMER_RECONNECT_BACKOFF_SECONDS}"
       REDIS_URL: "${REDIS_URL}"
+    secrets:
+      - aisstream_api_key
     depends_on:
       redis:
         condition: service_healthy
@@ -74,7 +79,9 @@ services:
     environment:
       POSTGRES_DB: "${POSTGRES_DB}"
       POSTGRES_USER: "${POSTGRES_USER}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -102,3 +109,9 @@ services:
 
 volumes:
   postgres_data:
+
+secrets:
+  aisstream_api_key:
+    file: ./secrets/aisstream_api_key
+  postgres_password:
+    file: ./secrets/postgres_password
