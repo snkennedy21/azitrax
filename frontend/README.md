@@ -55,8 +55,9 @@ Environment variables:
 ## Current Scope
 
 The app currently renders the OpenLayers map and checks backend health through
-React Query. In create-point mode, map clicks save points through the backend API
-and persisted points render as markers when the browser reloads.
+React Query. Saved points are read from the backend API and rendered as markers,
+but public point creation is disabled while the production site focuses on
+read-only endpoints.
 
 For the current manual browser checklist, see
 [../docs/smoke-test.md](../docs/smoke-test.md).

@@ -1,6 +1,4 @@
-from app.schemas.points import PointCreate
 from app.schemas.points import PointListItem
-from app.schemas.points import PointResponse
 from app.schemas.vessels import AisVesselRecord
 from app.schemas.vessels import CachedLiveVessel
 from app.schemas.vessels import LiveVesselMapItem
@@ -14,7 +12,5 @@ __all__ = [
     "LiveVesselMapItem",
     "LiveVesselsMetadata",
     "LiveVesselsResponse",
-    "PointCreate",
     "PointListItem",
-    "PointResponse",
 ]

@@ -36,23 +36,13 @@ Expected local URLs:
      interactions.
 3. Verify the API status indicator reports a connected state.
    - Expected: the status indicator on the map reads `API connected`.
-4. Enable create-point mode.
-   - Click the map mode button with the `Add Points` tooltip.
-   - Expected: the button switches from the hand icon to the location marker
-     icon, indicating add-points mode is active.
-5. Click the map to create a point.
-   - Expected: a blue circular point marker appears at the clicked location.
-6. Refresh the browser.
-   - Expected: the point marker still appears after reload, confirming the point
-     was persisted through the API and PostGIS.
-7. Optional API confirmation:
+4. Optional API confirmation:
 
 ```sh
 curl http://127.0.0.1:8000/points
 ```
 
-Expected: the response contains the point you created, with `id`, `lat`, and
-`lon` fields.
+Expected: the response is a JSON array of saved points. It may be empty.
 
 ## Troubleshooting
 

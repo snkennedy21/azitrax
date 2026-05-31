@@ -21,23 +21,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/live/vessels": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Live Vessels */
-        get: operations["get_live_vessels_live_vessels_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/health/db": {
         parameters: {
             query?: never;
@@ -47,6 +30,40 @@ export interface paths {
         };
         /** Database Health */
         get: operations["database_health_health_db_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health/redis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Redis Health */
+        get: operations["redis_health_health_redis_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/live/vessels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Live Vessels */
+        get: operations["get_live_vessels_live_vessels_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -65,8 +82,7 @@ export interface paths {
         /** Get Points */
         get: operations["get_points_points_get"];
         put?: never;
-        /** Create Point */
-        post: operations["create_point_points_post"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -77,11 +93,6 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** HTTPValidationError */
-        HTTPValidationError: {
-            /** Detail */
-            detail?: components["schemas"]["ValidationError"][];
-        };
         /**
          * LiveVesselMapItem
          * @description Temporary live map render contract, not a persisted vessel domain model.
@@ -115,9 +126,8 @@ export interface components {
             /**
              * Freshness
              * @description Freshness state derived from lastSeenAt
-             * @enum {string}
              */
-            freshness?: "fresh" | "stale" | null;
+            freshness?: ("fresh" | "stale") | null;
             /**
              * Mmsi
              * @description Maritime Mobile Service Identity when available
@@ -204,19 +214,6 @@ export interface components {
             /** @description Fetch metadata for poll freshness checks */
             metadata: components["schemas"]["LiveVesselsMetadata"];
         };
-        /** PointCreate */
-        PointCreate: {
-            /**
-             * Lat
-             * @description Latitude coordinate in WGS84 spatial reference system
-             */
-            lat: number;
-            /**
-             * Lon
-             * @description Longitude coordinate in WGS84 spatial reference system
-             */
-            lon: number;
-        };
         /** PointListItem */
         PointListItem: {
             /**
@@ -235,42 +232,6 @@ export interface components {
              */
             lon: number;
         };
-        /** PointResponse */
-        PointResponse: {
-            /**
-             * Id
-             * @description Unique point identifier
-             */
-            id: number;
-            /**
-             * Lat
-             * @description Latitude coordinate (WGS84)
-             */
-            lat: number;
-            /**
-             * Lon
-             * @description Longitude coordinate (WGS84)
-             */
-            lon: number;
-            /**
-             * Srid
-             * @description Spatial Reference System Identifier (typically 4326 for WGS84)
-             */
-            srid: number;
-        };
-        /** ValidationError */
-        ValidationError: {
-            /** Location */
-            loc: (string | number)[];
-            /** Message */
-            msg: string;
-            /** Error Type */
-            type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
-        };
     };
     responses: never;
     parameters: never;
@@ -281,6 +242,50 @@ export interface components {
 export type $defs = Record<string, never>;
 export interface operations {
     health_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    database_health_health_db_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    redis_health_health_redis_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -322,28 +327,6 @@ export interface operations {
             };
         };
     };
-    database_health_health_db_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
-                };
-            };
-        };
-    };
     get_points_points_get: {
         parameters: {
             query?: never;
@@ -360,39 +343,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PointListItem"][];
-                };
-            };
-        };
-    };
-    create_point_points_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PointCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PointResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
