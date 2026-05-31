@@ -235,6 +235,9 @@ curl -I "$APP_ORIGIN/"
 curl -fsS "$APP_ORIGIN/api/health"
 curl -fsS "$APP_ORIGIN/api/health/db"
 curl -fsS "$APP_ORIGIN/api/health/redis"
+curl -I "$APP_ORIGIN/api/docs"
+curl -I "$APP_ORIGIN/api/redoc"
+curl -I "$APP_ORIGIN/api/openapi.json"
 cd /srv/azitrax
 docker compose ps
 docker compose logs cloudflared --tail=50
@@ -299,7 +302,26 @@ curl -fsS "$APP_ORIGIN/api/health/redis"
 ```
 
 Expected result: both return `status: ok`. The database health response also
-includes the PostGIS version.
+does not include PostGIS version or other implementation details.
+
+For operator-level PostGIS verification, run the check from the production host:
+
+```sh
+docker compose exec db sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT PostGIS_Version();"'
+```
+
+### API Documentation
+
+Production disables public FastAPI docs and OpenAPI schema output. Check the
+public nginx path:
+
+```sh
+curl -I "$APP_ORIGIN/api/docs"
+curl -I "$APP_ORIGIN/api/redoc"
+curl -I "$APP_ORIGIN/api/openapi.json"
+```
+
+Expected result: all three return `404`.
 
 ### Startup Migrations
 
@@ -363,6 +385,7 @@ AIS_ALLOW_FIXTURE_FALLBACK=false
 POSTGRES_HOST=db
 POSTGRES_PORT=5432
 REDIS_URL=redis://redis:6379/0
+API_DOCS_ENABLED=false
 TUNNEL_TOKEN_FILE=/run/secrets/cloudflared_tunnel_token
 POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
 AISSTREAM_API_KEY_FILE=/run/secrets/aisstream_api_key

@@ -23,20 +23,15 @@ def test_health_endpoint_returns_ok(client: TestClient) -> None:
 
 
 def test_database_health_endpoint_returns_ok(client: TestClient) -> None:
-    """Test that /health/db endpoint returns 200 OK with PostGIS version.
+    """Test that /health/db endpoint returns a generic 200 OK response.
 
-    This endpoint queries the database to verify connectivity and that
-    PostGIS extension is available.
+    This endpoint queries the database to verify connectivity without exposing
+    implementation details publicly.
     """
     response = client.get("/health/db")
 
     assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "ok"
-    assert "postgis_version" in data
-    # PostGIS version should be a string like "3.4 USE_GEOS=1 USE_PROJ=1..."
-    assert isinstance(data["postgis_version"], str)
-    assert len(data["postgis_version"]) > 0
+    assert response.json() == {"status": "ok"}
 
 
 def test_database_health_uses_test_database(client: TestClient, db_connection) -> None:
