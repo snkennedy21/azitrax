@@ -150,7 +150,7 @@ jobs:
           remote_tmp="$(ssh "$target" 'mktemp -d')"
           scp .deploy/compose.yaml .deploy/nginx.conf .deploy/.env "$target:$remote_tmp/"
           scp -r .deploy/secrets "$target:$remote_tmp/secrets"
-          ssh "$target" "mkdir -p '$DEPLOY_DIR' && cp '$remote_tmp/compose.yaml' '$remote_tmp/nginx.conf' '$remote_tmp/.env' '$DEPLOY_DIR/' && rm -rf '$DEPLOY_DIR/secrets' && cp -R '$remote_tmp/secrets' '$DEPLOY_DIR/secrets' && chmod 600 '$DEPLOY_DIR/.env' && chmod 700 '$DEPLOY_DIR/secrets' && chmod 600 '$DEPLOY_DIR/secrets/'* && rm -rf '$remote_tmp'"
+          ssh "$target" "mkdir -p '$DEPLOY_DIR' && cp '$remote_tmp/compose.yaml' '$remote_tmp/nginx.conf' '$remote_tmp/.env' '$DEPLOY_DIR/' && rm -rf '$DEPLOY_DIR/secrets' && cp -R '$remote_tmp/secrets' '$DEPLOY_DIR/secrets' && chmod 600 '$DEPLOY_DIR/.env' && chmod 700 '$DEPLOY_DIR/secrets' && chmod 600 '$DEPLOY_DIR/secrets/'* && chmod 644 '$DEPLOY_DIR/secrets/cloudflared_tunnel_token' && rm -rf '$remote_tmp'"
 
       - name: Log in to GHCR on production host
         if: ${{ env.GHCR_USERNAME != '' && env.GHCR_TOKEN != '' }}

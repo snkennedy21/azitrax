@@ -135,9 +135,7 @@ git diff src/services/api/types.generated.ts
 2. Check FastAPI route returns the Pydantic model (not a dict)
 3. Test with curl to see actual API response:
    ```bash
-   curl -X POST http://127.0.0.1:8000/points \
-     -H "Content-Type: application/json" \
-     -d '{"lat": 45.0, "lon": -93.0}'
+   curl http://127.0.0.1:8000/points
    ```
 
 ## Developer Workflow
@@ -161,7 +159,7 @@ If you need to transform generated types:
 import type { components } from './types.generated';
 
 // Extract and transform
-export type Point = components['schemas']['PointResponse'];
+export type Point = components['schemas']['PointListItem'];
 
 // Add computed fields
 export type PointWithDistance = Point & {
@@ -169,17 +167,14 @@ export type PointWithDistance = Point & {
 };
 ```
 
-### Handling Response/Request Distinction
+### Handling Response Types
 
-The backend distinguishes between response and list types:
+The backend exposes saved points through a read-only list type:
 
-- **PointResponse**: Full details returned by POST /points (includes `srid`)
 - **PointListItem**: Minimal fields returned by GET /points (no `srid`)
-- **PointCreate**: Request payload for creating points
 
 This pattern:
 - Reduces payload size for list endpoints
-- Provides complete data for detail endpoints
 - Allows future expansion without breaking existing list consumers
 
 ## Example: Current API Types
@@ -187,16 +182,6 @@ This pattern:
 ### Backend Schema (Python)
 
 ```python
-class PointCreate(CamelCaseModel):
-    lat: float = Field(ge=-90, le=90)
-    lon: float = Field(ge=-180, le=180)
-
-class PointResponse(CamelCaseModel):
-    id: int
-    lat: float
-    lon: float
-    srid: int  # Spatial Reference System ID
-
 class PointListItem(CamelCaseModel):
     id: int
     lat: float
@@ -208,16 +193,6 @@ class PointListItem(CamelCaseModel):
 ```typescript
 export interface components {
   schemas: {
-    PointCreate: {
-      lat: number;
-      lon: number;
-    };
-    PointResponse: {
-      id: number;
-      lat: number;
-      lon: number;
-      srid: number;
-    };
     PointListItem: {
       id: number;
       lat: number;
@@ -230,33 +205,15 @@ export interface components {
 ### Type Helper Aliases
 
 ```typescript
-export type PointCreate = components['schemas']['PointCreate'];
-export type PointResponse = components['schemas']['PointResponse'];
 export type PointListItem = components['schemas']['PointListItem'];
-
-// Legacy compatibility
-export type Point = PointListItem;
-export type CreatePointPayload = PointCreate;
 ```
 
 ### Usage in React Query
 
 ```typescript
-// Create mutation returns full response
-export function useCreatePointMutation() {
-  return useMutation({
-    mutationFn: (payload: CreatePointPayload) =>
-      request<PointResponse>("/points", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      }),
-  });
-}
-
-// List query returns minimal items
 export function useGetPointsQuery() {
   return useQuery({
-    queryFn: () => request<Point[]>("/points"),
+    queryFn: () => request<PointListItem[]>("/points"),
   });
 }
 ```

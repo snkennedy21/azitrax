@@ -30,12 +30,10 @@ Check that it can connect to Redis:
 curl http://127.0.0.1:8000/health/redis
 ```
 
-Create a point:
+List saved points:
 
 ```sh
-curl -X POST http://127.0.0.1:8000/points \
-  -H "Content-Type: application/json" \
-  -d '{"lat": 40.7128, "lon": -74.0060}'
+curl http://127.0.0.1:8000/points
 ```
 
 ## Database Configuration
