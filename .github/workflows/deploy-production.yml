@@ -102,6 +102,7 @@ jobs:
           mkdir -p .deploy/secrets
           cp compose.prod.yaml .deploy/compose.yaml
           cp deploy/nginx/gateway.conf .deploy/nginx.conf
+          printf '%s' "$CLOUDFLARED_TUNNEL_TOKEN" > .deploy/secrets/cloudflared_tunnel_token
           printf '%s' "$POSTGRES_PASSWORD" > .deploy/secrets/postgres_password
           printf '%s' "$AISSTREAM_API_KEY" > .deploy/secrets/aisstream_api_key
 
@@ -114,7 +115,6 @@ jobs:
               "AZITRAX_IMAGE_TAG",
               "AZITRAX_BACKEND_IMAGE",
               "AZITRAX_FRONTEND_IMAGE",
-              "CLOUDFLARED_TUNNEL_TOKEN",
               "DATABASE_URL",
               "POSTGRES_DB",
               "POSTGRES_HOST",

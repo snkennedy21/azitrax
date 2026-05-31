@@ -30,15 +30,15 @@ published on local host ports for public access.
 
 Store the tunnel token outside committed source files. Production deploys read
 it from the GitHub Environment secret `AZITRAX_CLOUDFLARED_TUNNEL_TOKEN` and
-render it into `/srv/azitrax/.env` as:
+write it to a mounted secret file:
 
 ```sh
-CLOUDFLARED_TUNNEL_TOKEN=<token copied from Cloudflare>
+/srv/azitrax/secrets/cloudflared_tunnel_token
 ```
 
-`compose.prod.yaml` passes that value into the container as `TUNNEL_TOKEN`,
-which is the environment variable supported by `cloudflared tunnel run` for
-remotely managed tunnels.
+`compose.prod.yaml` mounts that file into the container and passes
+`TUNNEL_TOKEN_FILE=/run/secrets/cloudflared_tunnel_token`, which is supported by
+`cloudflared tunnel run` for remotely managed tunnels.
 
 Do not commit the tunnel token, Cloudflare API tokens, or any generated
 Cloudflare credential files.
