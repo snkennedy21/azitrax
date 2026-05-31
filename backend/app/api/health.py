@@ -25,7 +25,7 @@ def database_health(db: DbConnection) -> dict[str, str]:
     try:
         # psycopg v3 lets a connection execute SQL directly. It returns a
         # cursor, and fetchone() reads the first row from that cursor.
-        row = db.execute("SELECT PostGIS_Version() AS postgis_version").fetchone()
+        row = db.execute("SELECT 1 AS ok").fetchone()
     except PsycopgError as exc:
         # Translate database-driver errors into a useful HTTP response.
         raise HTTPException(status_code=503, detail="database unavailable") from exc
@@ -35,8 +35,7 @@ def database_health(db: DbConnection) -> dict[str, str]:
     if row is None:
         raise HTTPException(status_code=503, detail="database unavailable")
 
-    # Rows come back dict-like because db.connection configured row_factory=dict_row.
-    return {"status": "ok", "postgis_version": row["postgis_version"]}
+    return {"status": "ok"}
 
 
 @router.get("/health/redis")

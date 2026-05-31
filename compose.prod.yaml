@@ -25,6 +25,7 @@ x-backend-environment: &backend-environment
   POSTGRES_POOL_TIMEOUT: "${POSTGRES_POOL_TIMEOUT}"
   REDIS_URL: "${REDIS_URL}"
   FRONTEND_ORIGINS: "${FRONTEND_ORIGINS:?FRONTEND_ORIGINS is required}"
+  API_DOCS_ENABLED: "false"
 
 services:
   nginx:

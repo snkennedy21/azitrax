@@ -117,6 +117,10 @@ def frontend_origins_from_env() -> list[str]:
     ]
 
 
+def api_docs_enabled_from_env() -> bool:
+    return _parse_bool(os.getenv("API_DOCS_ENABLED", "true"))
+
+
 def _parse_bool(value: str) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
