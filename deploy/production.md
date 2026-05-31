@@ -65,7 +65,7 @@ database pool settings, and `COMPOSE_PROJECT_NAME=azitrax`.
 Expected values for this deployment:
 
 ```sh
-AZITRAX_IMAGE_TAG=develop
+AZITRAX_IMAGE_TAG=main
 AZITRAX_PUBLIC_ORIGIN=https://azitrax.com
 AZITRAX_POSTGRES_DB=azitrax
 AZITRAX_POSTGRES_USER=azitrax
