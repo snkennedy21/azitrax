@@ -1,9 +1,9 @@
 name: ${COMPOSE_PROJECT_NAME:-azitrax}
 
 x-ais-environment: &ais-environment
-  AIS_SOURCE: "${AIS_SOURCE:-fixture}"
+  AIS_SOURCE: "${AIS_SOURCE:-aisstream}"
   AIS_FIXTURE_PATH: "${AIS_FIXTURE_PATH:-/app/app/fixtures/aisstream-position-reports-sample.json}"
-  AIS_ALLOW_FIXTURE_FALLBACK: "${AIS_ALLOW_FIXTURE_FALLBACK:-true}"
+  AIS_ALLOW_FIXTURE_FALLBACK: "${AIS_ALLOW_FIXTURE_FALLBACK:-false}"
   AISSTREAM_WS_URL: "${AISSTREAM_WS_URL:-wss://stream.aisstream.io/v0/stream}"
   AISSTREAM_API_KEY: "${AISSTREAM_API_KEY:-}"
   AISSTREAM_BOUNDING_BOXES: "${AISSTREAM_BOUNDING_BOXES:-[[[40.4774,-74.2591],[40.9176,-73.7004]]]}"

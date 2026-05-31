@@ -6,7 +6,7 @@ import pytest
 from app.ais_source import AisSourceClient
 from app.ais_source import AisSourceConfig
 from app.ais_source import map_live_vessel_items
-from app.schemas import AisVesselRecord
+from app.schemas.vessels import AisVesselRecord
 
 
 def fixture_path() -> Path:

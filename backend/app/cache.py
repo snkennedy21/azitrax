@@ -9,7 +9,7 @@ from fastapi import Request
 from redis import Redis
 from redis.exceptions import RedisError
 
-from app.schemas import CachedLiveVessel
+from app.schemas.vessels import CachedLiveVessel
 
 
 # Live Redis snapshot contract only. These keys are not durable persistence and

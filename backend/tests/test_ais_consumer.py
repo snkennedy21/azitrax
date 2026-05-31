@@ -15,7 +15,7 @@ from app.cache import LIVE_VESSEL_EXPIRE_AFTER_SECONDS
 from app.cache import LIVE_VESSELS_INDEX_KEY
 from app.cache import deserialize_cached_live_vessel
 from app.cache import live_vessel_key
-from app.schemas import AisVesselRecord
+from app.schemas.vessels import AisVesselRecord
 
 
 class FakeRedisClient:

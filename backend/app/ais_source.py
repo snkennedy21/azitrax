@@ -9,8 +9,8 @@ from pathlib import Path
 import ssl
 from typing import Any
 
-from app.schemas import AisVesselRecord
-from app.schemas import LiveVesselMapItem
+from app.schemas.vessels import AisVesselRecord
+from app.schemas.vessels import LiveVesselMapItem
 
 
 DEFAULT_BOUNDING_BOXES = [[[40.4774, -74.2591], [40.9176, -73.7004]]]

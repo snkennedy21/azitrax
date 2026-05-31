@@ -21,8 +21,8 @@ from app.cache import LIVE_VESSEL_EXPIRE_AFTER_SECONDS
 from app.cache import LIVE_VESSELS_INDEX_KEY
 from app.cache import live_vessel_key
 from app.cache import serialize_cached_live_vessel
-from app.schemas import AisVesselRecord
-from app.schemas import CachedLiveVessel
+from app.schemas.vessels import AisVesselRecord
+from app.schemas.vessels import CachedLiveVessel
 
 
 @dataclass(frozen=True)

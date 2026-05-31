@@ -12,7 +12,7 @@ from app.cache import LIVE_AIS_STATUS_KEY
 from app.cache import LIVE_VESSELS_INDEX_KEY
 from app.cache import live_vessel_key
 from app.main import app
-from app.schemas import AisVesselRecord
+from app.schemas.vessels import AisVesselRecord
 
 
 def test_live_vessels_endpoint_reads_populated_redis_snapshot(
