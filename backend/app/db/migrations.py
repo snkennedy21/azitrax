@@ -21,6 +21,8 @@ def run_migrations() -> None:
     Raises:
         RuntimeError: If Flyway execution fails or returns non-zero exit code.
     """
+    migration_env = _build_migration_env()
+
     # Validate required environment variables
     required_vars = [
         "POSTGRES_HOST",
@@ -29,7 +31,7 @@ def run_migrations() -> None:
         "POSTGRES_USER",
         "POSTGRES_PASSWORD",
     ]
-    missing_vars = [var for var in required_vars if not os.getenv(var)]
+    missing_vars = [var for var in required_vars if not migration_env.get(var)]
     if missing_vars:
         raise RuntimeError(
             f"Missing required environment variables for migrations: {', '.join(missing_vars)}"
@@ -42,7 +44,7 @@ def run_migrations() -> None:
     print("=" * 80, file=sys.stderr)
     print("Starting database migrations with Flyway...", file=sys.stderr)
     print(
-        f"Database: {os.getenv('POSTGRES_DB')} at {os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}",
+        f"Database: {migration_env.get('POSTGRES_DB')} at {migration_env.get('POSTGRES_HOST')}:{migration_env.get('POSTGRES_PORT')}",
         file=sys.stderr,
     )
     print("=" * 80, file=sys.stderr)
@@ -52,7 +54,7 @@ def run_migrations() -> None:
         result = subprocess.run(
             flyway_cmd,
             check=True,
-            env=os.environ.copy(),
+            env=migration_env,
             cwd="/app",
             capture_output=True,
             text=True,
@@ -81,6 +83,16 @@ def run_migrations() -> None:
         raise RuntimeError(
             "Flyway command not found. Ensure Flyway is installed in the Docker image."
         )
+
+
+def _build_migration_env() -> dict[str, str]:
+    migration_env = os.environ.copy()
+
+    password_file = migration_env.get("POSTGRES_PASSWORD_FILE")
+    if password_file:
+        migration_env["POSTGRES_PASSWORD"] = Path(password_file).read_text(encoding="utf-8").strip()
+
+    return migration_env
 
 
 def validate_migrations() -> None:

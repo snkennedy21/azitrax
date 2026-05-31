@@ -32,7 +32,7 @@ class DatabaseConfig:
             port=int(os.getenv("POSTGRES_PORT", "5432")),
             dbname=os.getenv("POSTGRES_DB", "azitrax"),
             user=os.getenv("POSTGRES_USER", "azitrax"),
-            password=os.getenv("POSTGRES_PASSWORD", "azitrax"),
+            password=_read_secret_env("POSTGRES_PASSWORD", "azitrax") or "azitrax",
             connect_timeout=int(os.getenv("POSTGRES_CONNECT_TIMEOUT", "5")),
             pool_min_size=int(os.getenv("POSTGRES_POOL_MIN_SIZE", "1")),
             pool_max_size=int(os.getenv("POSTGRES_POOL_MAX_SIZE", "5")),
@@ -79,7 +79,7 @@ class AisSourceConfig:
             fixture_path=_resolve_path(os.getenv("AIS_FIXTURE_PATH"), DEFAULT_AIS_FIXTURE_PATH),
             allow_fixture_fallback=_parse_bool(os.getenv("AIS_ALLOW_FIXTURE_FALLBACK", "true")),
             aisstream_ws_url=os.getenv("AISSTREAM_WS_URL", "wss://stream.aisstream.io/v0/stream"),
-            aisstream_api_key=os.getenv("AISSTREAM_API_KEY") or None,
+            aisstream_api_key=_read_secret_env("AISSTREAM_API_KEY") or None,
             aisstream_bounding_boxes=_parse_json_env("AISSTREAM_BOUNDING_BOXES", DEFAULT_AIS_BOUNDING_BOXES),
             aisstream_message_types=_parse_csv_env("AISSTREAM_MESSAGE_TYPES", ["PositionReport"]),
             aisstream_connect_timeout_seconds=float(os.getenv("AISSTREAM_CONNECT_TIMEOUT_SECONDS", "30")),
@@ -119,6 +119,13 @@ def frontend_origins_from_env() -> list[str]:
 
 def _parse_bool(value: str) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _read_secret_env(name: str, default: str | None = None) -> str | None:
+    file_path = os.getenv(f"{name}_FILE")
+    if file_path:
+        return Path(file_path).read_text(encoding="utf-8").strip()
+    return os.getenv(name, default)
 
 
 def _parse_csv_env(name: str, default: list[str]) -> list[str]:
