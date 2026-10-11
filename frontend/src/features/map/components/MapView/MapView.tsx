@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import Map from "ol/Map.js";
 import View from "ol/View.js";
+import Attribution from "ol/control/Attribution.js";
 import TileLayer from "ol/layer/Tile.js";
 import VectorLayer from "ol/layer/Vector.js";
 import ImageTile from "ol/source/ImageTile.js";
@@ -16,6 +17,16 @@ import {
   useGetVesselsQuery,
 } from "@/services/api";
 import styles from "./styles.module.scss";
+
+function getCartoBasemapApiKey(): string {
+  const apiKey = import.meta.env.VITE_CARTO_BASEMAP_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error("VITE_CARTO_BASEMAP_API_KEY is required");
+  }
+  return apiKey;
+}
+
+const cartoBasemapApiKey = getCartoBasemapApiKey();
 
 export function MapView() {
   const mapElement = useRef<HTMLDivElement | null>(null);
@@ -72,7 +83,7 @@ export function MapView() {
       source: new ImageTile({
         attributions:
           '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
-        url: "https://{a-d}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+        url: `https://{a-d}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png?key=${encodeURIComponent(cartoBasemapApiKey)}`,
       }),
     });
 
@@ -83,7 +94,7 @@ export function MapView() {
         center: fromLonLat([0, 20]),
         zoom: 2,
       }),
-      controls: [], // Remove all default controls (zoom buttons, attribution, etc.)
+      controls: [new Attribution({ collapsible: false })],
     });
 
     mapRef.current = map;

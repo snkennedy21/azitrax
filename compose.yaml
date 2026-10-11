@@ -20,6 +20,7 @@ services:
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
       VITE_API_PROXY_TARGET: ${VITE_API_PROXY_TARGET:-http://backend:8000}
+      VITE_CARTO_BASEMAP_API_KEY: ${VITE_CARTO_BASEMAP_API_KEY:?VITE_CARTO_BASEMAP_API_KEY is required}
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
     volumes:

@@ -11,6 +11,11 @@
 .map {
   width: 100%;
   height: 100%;
+
+  :global(.ol-attribution) {
+    right: auto;
+    left: $spacing8;
+  }
 }
 
 .statusStack {

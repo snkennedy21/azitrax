@@ -51,6 +51,8 @@ Environment variables:
 - `VITE_API_PROXY_TARGET`: Vite dev proxy target for `/api`. Defaults to
   `http://127.0.0.1:8000` when running Vite directly; Compose sets it to
   `http://backend:8000`.
+- `VITE_CARTO_BASEMAP_API_KEY`: CARTO Basemaps API key used by the Dark Matter
+  raster tile layer. Required for the basemap to render.
 
 ## Current Scope
 
