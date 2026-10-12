@@ -1,0 +1,115 @@
+@use '../../../../styles/variables' as *;
+
+.vesselPopup {
+  position: relative;
+  width: 200px;
+  border: 1px solid $colorDarkBorder;
+  border-radius: $borderRadius8;
+  background: $colorDarkBgHover;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+  color: $colorSlate50;
+  font: $fontWeight400 $fontSize13 $fontSystemUi;
+  line-height: $lineHeight13;
+  padding: $spacing10;
+
+  &[aria-hidden="true"] {
+    display: none;
+  }
+
+  &::after {
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    border-right: 1px solid $colorDarkBorder;
+    border-bottom: 1px solid $colorDarkBorder;
+    background: $colorDarkBgHover;
+    content: "";
+    transform: translateX(-50%) rotate(45deg);
+  }
+}
+
+.header {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing8;
+  margin-bottom: $spacing8;
+
+  strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.closeButton {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: $colorSlate50;
+  cursor: pointer;
+  flex: 0 0 auto;
+  font: $fontWeight400 20px/1 $fontSystemUi;
+  place-items: center;
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(255, 255, 255, 0.12);
+    outline: none;
+  }
+}
+
+.details {
+  display: grid;
+  gap: $spacing4;
+  margin: 0;
+
+  > div {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: $spacing8;
+  }
+
+  dt {
+    color: rgba(248, 250, 252, 0.62);
+  }
+
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    text-align: right;
+  }
+}
+
+.freshness {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: $spacing8;
+  color: rgba(248, 250, 252, 0.72);
+  font-size: 11px;
+  text-transform: capitalize;
+
+  &::before {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: $colorSlate500;
+    content: "";
+  }
+
+  &[data-freshness="fresh"]::before {
+    background: #22c55e;
+  }
+
+  &[data-freshness="stale"]::before {
+    background: #f59e0b;
+  }
+}

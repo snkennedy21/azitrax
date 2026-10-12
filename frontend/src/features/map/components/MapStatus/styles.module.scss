@@ -1,0 +1,68 @@
+@use '../../../../styles/variables' as *;
+
+.statusStack {
+  position: absolute;
+  right: $spacing16;
+  bottom: $spacing16;
+  z-index: $zIndexToggleButton;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing8;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+.statusPill {
+  border: 1px solid $colorDarkBorder;
+  border-radius: $borderRadius8;
+  background: $colorDarkBg;
+  color: $colorSlate50;
+  font: $fontWeight600 $fontSize13 $fontSystemUi;
+  line-height: $lineHeight13;
+  max-width: min(320px, calc(100vw - #{$spacing16} * 2));
+  overflow-wrap: anywhere;
+  padding: $spacing8 $spacing10;
+
+  &[data-loading="true"] {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing8;
+  }
+
+  &[data-loading="true"]::before {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f97316;
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4);
+    content: "";
+    flex: 0 0 auto;
+    animation: vesselStatusBeacon 1.5s ease-out infinite;
+  }
+
+  &[data-state="error"] {
+    background: $colorErrorBg;
+  }
+}
+
+@keyframes vesselStatusBeacon {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4);
+    opacity: 0.76;
+    transform: scale(0.92);
+  }
+
+  50% {
+    box-shadow: 0 0 0 7px rgba(249, 115, 22, 0);
+    opacity: 1;
+    transform: scale(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .statusPill[data-loading="true"]::before {
+    animation: none;
+    opacity: 1;
+  }
+}
