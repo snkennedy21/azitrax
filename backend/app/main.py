@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.health import router as health_router
 from app.api.live_vessels import router as live_vessels_router
 from app.api.points import router as points_router
+from app.api.vessel_history import router as vessel_history_router
 from app.cache.redis import create_redis_client
 from app.config import api_docs_enabled_from_env
 from app.config import frontend_origins_from_env
@@ -75,6 +76,7 @@ def create_app() -> FastAPI:
     api.include_router(health_router)
     api.include_router(live_vessels_router)
     api.include_router(points_router)
+    api.include_router(vessel_history_router)
 
     return api
 

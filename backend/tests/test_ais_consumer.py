@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 from datetime import timezone
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -129,6 +130,7 @@ def test_malformed_aisstream_message_is_skipped_without_redis_write() -> None:
             },
             "Message": {"PositionReport": {}},
         },
+        db=MagicMock(),
         observed_at=datetime(2026, 5, 13, 16, 2, tzinfo=timezone.utc),
     )
 
@@ -172,6 +174,8 @@ def test_source_status_preserves_success_and_error_timing() -> None:
 @pytest.mark.asyncio
 async def test_aisstream_consumer_reconnects_after_websocket_failure() -> None:
     redis_client = FakeRedisClient()
+    db_pool = MagicMock()
+    db_pool.connection.return_value.__enter__.return_value = MagicMock()
     connector = ReconnectingWebSocketConnector(
         [
             FailingWebSocket(RuntimeError("temporary disconnect")),
@@ -204,6 +208,7 @@ async def test_aisstream_consumer_reconnects_after_websocket_failure() -> None:
         ),
         redis_client=redis_client,
         ws_connect=connector,
+        db_pool=db_pool,
     )
 
     assert exit_code == 0

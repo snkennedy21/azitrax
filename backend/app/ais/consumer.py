@@ -8,11 +8,16 @@ import signal
 import ssl
 from typing import Any
 
+from psycopg import Connection
+from psycopg.rows import DictRow
+from psycopg_pool import ConnectionPool
+
 from app.ais.source import AisSourceError
 from app.ais.source import DEFAULT_BOUNDING_BOXES
 from app.ais.source import load_ais_vessel_records
 from app.config import AisConsumerConfig
 from app.config import AisSourceConfig
+from app.db.connection import create_pool
 from app.cache.redis import create_redis_client
 from app.cache.redis import deserialize_cached_live_vessel
 from app.cache.redis import LIVE_AIS_STATUS_KEY
@@ -20,6 +25,7 @@ from app.cache.redis import LIVE_VESSEL_EXPIRE_AFTER_SECONDS
 from app.cache.redis import LIVE_VESSELS_INDEX_KEY
 from app.cache.redis import live_vessel_key
 from app.cache.redis import serialize_cached_live_vessel
+from app.services.vessel_history import insert_vessel_history_record
 from app.schemas.vessels import AisVesselRecord
 from app.schemas.vessels import CachedLiveVessel
 
@@ -30,6 +36,7 @@ async def run_consumer(
     stop_event: asyncio.Event | None = None,
     redis_client: Any | None = None,
     ws_connect: Any | None = None,
+    db_pool: ConnectionPool | None = None,
 ) -> int:
     try:
         consumer_config = consumer_config or AisConsumerConfig.from_env()
@@ -40,6 +47,10 @@ async def run_consumer(
     stop_event = stop_event or asyncio.Event()
     owns_redis_client = redis_client is None
     redis_client = redis_client or create_redis_client()
+    owns_db_pool = db_pool is None
+    db_pool = db_pool or create_pool()
+    if owns_db_pool:
+        db_pool.open()
 
     exit_code = 0
     try:
@@ -50,6 +61,7 @@ async def run_consumer(
                 ais_config=ais_config,
                 stop_event=stop_event,
                 ws_connect=ws_connect,
+                db_pool=db_pool,
             )
 
         while not stop_event.is_set():
@@ -71,6 +83,8 @@ async def run_consumer(
     finally:
         if owns_redis_client:
             redis_client.close()
+        if owns_db_pool:
+            db_pool.close()
 
     return exit_code
 
@@ -81,6 +95,7 @@ async def _consume_aisstream(
     ais_config: AisSourceConfig,
     stop_event: asyncio.Event,
     ws_connect: Any | None = None,
+    db_pool: ConnectionPool | None = None,
 ) -> int:
     if not ais_config.aisstream_api_key:
         write_source_status(
@@ -131,7 +146,15 @@ async def _consume_aisstream(
                         ais_config=ais_config,
                         last_successful_message_at=datetime.now(timezone.utc),
                     )
-                    written_count = process_aisstream_message(redis_client, source_message)
+                    if db_pool is None:
+                        raise RuntimeError("database pool is required for AISStream consumption")
+
+                    with db_pool.connection() as db:
+                        written_count = process_aisstream_message(
+                            redis_client,
+                            source_message,
+                            db=db,
+                        )
                     if written_count:
                         write_source_status(
                             redis_client,
@@ -189,11 +212,15 @@ def upsert_live_vessel_records(
 def process_aisstream_message(
     redis_client: Any,
     message: Any,
+    db: Connection[DictRow],
     observed_at: datetime | None = None,
 ) -> int:
     record = normalize_aisstream_message(message)
+    print('record: ', record)
     if record is None:
         return 0
+
+    insert_vessel_history_record(db, record)
 
     return upsert_live_vessel_records(redis_client, [record], observed_at=observed_at)
 

@@ -85,11 +85,23 @@ services:
       AIS_CONSUMER_POLL_SECONDS: "${AIS_CONSUMER_POLL_SECONDS:-60}"
       AIS_CONSUMER_RUN_ONCE: "${AIS_CONSUMER_RUN_ONCE:-false}"
       AIS_CONSUMER_RECONNECT_BACKOFF_SECONDS: "${AIS_CONSUMER_RECONNECT_BACKOFF_SECONDS:-5}"
+      DATABASE_URL: ${DATABASE_URL:-}
+      POSTGRES_HOST: ${POSTGRES_HOST:-db}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-azitrax}
+      POSTGRES_USER: ${POSTGRES_USER:-azitrax}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-azitrax}
+      POSTGRES_CONNECT_TIMEOUT: ${POSTGRES_CONNECT_TIMEOUT:-5}
+      POSTGRES_POOL_MIN_SIZE: ${POSTGRES_POOL_MIN_SIZE:-1}
+      POSTGRES_POOL_MAX_SIZE: ${POSTGRES_POOL_MAX_SIZE:-5}
+      POSTGRES_POOL_TIMEOUT: ${POSTGRES_POOL_TIMEOUT:-5}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
     volumes:
       - ./backend:/app
       - ./docs:/docs:ro
     depends_on:
+      db:
+        condition: service_healthy
       redis:
         condition: service_healthy
 
