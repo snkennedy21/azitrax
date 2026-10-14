@@ -93,6 +93,21 @@ services:
       redis:
         condition: service_healthy
 
+  ais-probe:
+    profiles: ["probe"]
+    build:
+      context: ./backend
+    command: python -m app.ais.global_probe
+    environment:
+      <<: *ais-environment
+      AIS_PROBE_DURATION_SECONDS: "${AIS_PROBE_DURATION_SECONDS:-60}"
+      AIS_PROBE_CHECKPOINT_SECONDS: "${AIS_PROBE_CHECKPOINT_SECONDS:-60}"
+      AIS_PROBE_DUPLICATE_WINDOW_SECONDS: "${AIS_PROBE_DUPLICATE_WINDOW_SECONDS:-300}"
+      AIS_PROBE_RECONNECT_BACKOFF_SECONDS: "${AIS_PROBE_RECONNECT_BACKOFF_SECONDS:-5}"
+      AISSTREAM_BOUNDING_BOXES: "${AIS_PROBE_BOUNDING_BOXES:-[[[-90,-180],[90,180]]]}"
+    volumes:
+      - ./backend:/app
+
   db:
     image: postgis/postgis:16-3.4
     environment:
