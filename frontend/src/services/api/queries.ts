@@ -51,3 +51,19 @@ export function useGetVesselsQuery() {
     retry: 1,
   });
 }
+
+export function useGetVesselHistoryQuery(mmsi: number | null) {
+  return useQuery({
+    queryKey: ["vessel-history", mmsi],
+    queryFn: () => {
+      if (mmsi === null) {
+        throw new Error("MMSI is required to request vessel history");
+      }
+
+      return request<PointListItem[]>(`/vessels/${mmsi}/history`);
+    },
+    enabled: false,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
+}

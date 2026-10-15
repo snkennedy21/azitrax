@@ -87,6 +87,29 @@
   }
 }
 
+.historyButton {
+  width: 100%;
+  margin-top: $spacing8;
+  border: 1px solid $colorDarkBorder;
+  border-radius: $borderRadius8;
+  background: rgba(255, 255, 255, 0.08);
+  color: $colorSlate50;
+  cursor: pointer;
+  font: inherit;
+  padding: $spacing8;
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    background: rgba(255, 255, 255, 0.14);
+    outline: none;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+}
+
 .freshness {
   display: flex;
   align-items: center;

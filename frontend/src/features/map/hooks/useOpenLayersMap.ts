@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import Feature from "ol/Feature.js";
 import Map from "ol/Map.js";
 import type MapBrowserEvent from "ol/MapBrowserEvent.js";
@@ -18,6 +18,8 @@ import { getVesselStyle } from "../styles/vesselStyle";
 type UseOpenLayersMapOptions = {
   points?: PointListItem[];
   vessels?: LiveVesselMapItem[];
+  selectedVesselId: string | null;
+  onSelectedVesselIdChange: (vesselId: string | null) => void;
 };
 
 function getCartoBasemapApiKey(): string {
@@ -75,7 +77,12 @@ function replaceVesselFeatures(layer: VectorLayer<VectorSource>, vessels: LiveVe
   );
 }
 
-export function useOpenLayersMap({ points, vessels }: UseOpenLayersMapOptions) {
+export function useOpenLayersMap({
+  points,
+  vessels,
+  selectedVesselId,
+  onSelectedVesselIdChange,
+}: UseOpenLayersMapOptions) {
   // OpenLayers objects are mutable and do not belong in React state. Refs keep
   // them stable across renders without causing React to render on map changes.
   const mapTargetRef = useRef<HTMLDivElement | null>(null);
@@ -83,7 +90,6 @@ export function useOpenLayersMap({ points, vessels }: UseOpenLayersMapOptions) {
   const pointLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const vesselLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const vesselPopupRef = useRef<Overlay | null>(null);
-  const [selectedVesselId, setSelectedVesselId] = useState<string | null>(null);
 
   const selectedVessel =
     vessels?.find((vessel) => vessel.id === selectedVesselId) ?? null;
@@ -148,9 +154,9 @@ export function useOpenLayersMap({ points, vessels }: UseOpenLayersMapOptions) {
         (feature, layer) =>
           layer === vesselLayer ? (feature.get("vesselId") as string | undefined) : undefined,
         { hitTolerance: 6 },
-      );
+    );
     const handleMapClick = (event: MapBrowserEvent) => {
-      setSelectedVesselId(findVesselAtPixel(event) ?? null);
+      onSelectedVesselIdChange(findVesselAtPixel(event) ?? null);
     };
     const handlePointerMove = (event: MapBrowserEvent) => {
       map.getTargetElement().style.cursor = findVesselAtPixel(event) ? "pointer" : "";
@@ -171,7 +177,7 @@ export function useOpenLayersMap({ points, vessels }: UseOpenLayersMapOptions) {
       vesselLayerRef.current = null;
       vesselPopupRef.current = null;
     };
-  }, []);
+  }, [onSelectedVesselIdChange]);
 
   // Keep saved-point features synchronized with query data without recreating
   // the map or its layers.
@@ -189,10 +195,10 @@ export function useOpenLayersMap({ points, vessels }: UseOpenLayersMapOptions) {
     }
 
     replaceVesselFeatures(vesselLayerRef.current, vessels);
-    setSelectedVesselId((currentId) =>
-      currentId && !vessels.some((vessel) => vessel.id === currentId) ? null : currentId,
-    );
-  }, [vessels]);
+    if (selectedVesselId && !vessels.some((vessel) => vessel.id === selectedVesselId)) {
+      onSelectedVesselIdChange(null);
+    }
+  }, [onSelectedVesselIdChange, selectedVesselId, vessels]);
 
   // The popup is rendered by React, but positioned geographically by the
   // OpenLayers overlay whenever the selected vessel moves or changes.
@@ -211,14 +217,17 @@ export function useOpenLayersMap({ points, vessels }: UseOpenLayersMapOptions) {
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setSelectedVesselId(null);
+        onSelectedVesselIdChange(null);
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [selectedVesselId]);
+  }, [onSelectedVesselIdChange, selectedVesselId]);
 
-  const closeVesselPopup = useCallback(() => setSelectedVesselId(null), []);
+  const closeVesselPopup = useCallback(
+    () => onSelectedVesselIdChange(null),
+    [onSelectedVesselIdChange],
+  );
 
   // This is the hook's complete interface: DOM attachment points plus the
   // small amount of selection state the React view needs to render.

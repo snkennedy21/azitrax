@@ -1,10 +1,11 @@
 import {
   useGetHealthQuery,
   useGetPointsQuery,
+  useGetVesselHistoryQuery,
   useGetVesselsQuery,
 } from "@/services/api";
 
-export function useMapData() {
+export function useMapData(selectedVesselId: string | null) {
   const { data: healthData, status: healthStatus } = useGetHealthQuery();
   const { data: points } = useGetPointsQuery();
   const {
@@ -13,6 +14,14 @@ export function useMapData() {
     isFetching: vesselsAreFetching,
     status: vesselsStatus,
   } = useGetVesselsQuery();
+  const selectedVessel = vesselsData?.items.find(
+    (vessel) => vessel.id === selectedVesselId,
+  );
+  const {
+    data: vesselHistory,
+    isFetching: vesselHistoryIsFetching,
+    refetch: fetchVesselHistory,
+  } = useGetVesselHistoryQuery(selectedVessel?.mmsi ?? null);
 
   const vesselCount = vesselsData?.metadata.returnedCount ?? 0;
   const vesselsAreLoading = !vesselsError &&
@@ -29,6 +38,9 @@ export function useMapData() {
   return {
     points,
     vessels: vesselsData?.items,
+    vesselHistory,
+    vesselHistoryIsFetching,
+    fetchVesselHistory,
     status: {
       vessels: {
         text: vesselStatusText,

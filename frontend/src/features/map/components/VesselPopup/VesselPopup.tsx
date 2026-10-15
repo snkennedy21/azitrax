@@ -4,11 +4,17 @@ import styles from "./styles.module.scss";
 
 type VesselPopupProps = {
   vessel: LiveVesselMapItem | null;
+  historyIsFetching: boolean;
+  onLoadHistory: () => void;
   onClose: () => void;
 };
 
 export const VesselPopup = forwardRef<HTMLDivElement, VesselPopupProps>(
-  function VesselPopup({ vessel, onClose }, ref) {
+  function VesselPopup({ vessel, historyIsFetching, onLoadHistory, onClose }, ref) {
+    const handleLoadHistory = () => {
+      onLoadHistory();
+    };
+
     return (
       <div
         ref={ref}
@@ -50,6 +56,14 @@ export const VesselPopup = forwardRef<HTMLDivElement, VesselPopupProps>(
                 </div>
               )}
             </dl>
+            <button
+              className={styles.historyButton}
+              type="button"
+              disabled={vessel.mmsi == null || historyIsFetching}
+              onClick={handleLoadHistory}
+            >
+              {historyIsFetching ? "Loading history…" : "Load history"}
+            </button>
             <div className={styles.freshness} data-freshness={vessel.freshness}>
               {vessel.freshness ?? "Unknown"}
             </div>
