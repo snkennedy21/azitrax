@@ -1,5 +1,5 @@
 import "ol/ol.css";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { MapStatus } from "../MapStatus/MapStatus";
 import { VesselPopup } from "../VesselPopup/VesselPopup";
 import { useMapData } from "../../hooks/useMapData";
@@ -8,6 +8,7 @@ import styles from "./styles.module.scss";
 
 export function MapView() {
   const [selectedVesselId, setSelectedVesselId] = useState<string | null>(null);
+  const [historyIsVisible, setHistoryIsVisible] = useState(false);
   const {
     points,
     vessels,
@@ -17,6 +18,11 @@ export function MapView() {
     status,
   } = useMapData(selectedVesselId);
 
+  const handleSelectedVesselIdChange = useCallback((vesselId: string | null) => {
+    setHistoryIsVisible(false);
+    setSelectedVesselId(vesselId);
+  }, []);
+
   const {
     mapTargetRef,
     popupTargetRef,
@@ -25,12 +31,13 @@ export function MapView() {
   } = useOpenLayersMap({
     points,
     vessels,
-    vesselHistory,
+    vesselHistory: historyIsVisible ? vesselHistory : undefined,
     selectedVesselId,
-    onSelectedVesselIdChange: setSelectedVesselId,
+    onSelectedVesselIdChange: handleSelectedVesselIdChange,
   });
 
   const handleLoadVesselHistory = () => {
+    setHistoryIsVisible(true);
     void fetchVesselHistory();
   };
 
