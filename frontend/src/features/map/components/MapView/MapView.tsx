@@ -11,6 +11,7 @@ export function MapView() {
   const {
     points,
     vessels,
+    vesselHistory,
     vesselHistoryIsFetching,
     fetchVesselHistory,
     status,
@@ -24,6 +25,7 @@ export function MapView() {
   } = useOpenLayersMap({
     points,
     vessels,
+    vesselHistory,
     selectedVesselId,
     onSelectedVesselIdChange: setSelectedVesselId,
   });

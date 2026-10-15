@@ -5,6 +5,7 @@ import type MapBrowserEvent from "ol/MapBrowserEvent.js";
 import Overlay from "ol/Overlay.js";
 import View from "ol/View.js";
 import Attribution from "ol/control/Attribution.js";
+import LineString from "ol/geom/LineString.js";
 import Point from "ol/geom/Point.js";
 import TileLayer from "ol/layer/Tile.js";
 import VectorLayer from "ol/layer/Vector.js";
@@ -18,6 +19,7 @@ import { getVesselStyle } from "../styles/vesselStyle";
 type UseOpenLayersMapOptions = {
   points?: PointListItem[];
   vessels?: LiveVesselMapItem[];
+  vesselHistory?: PointListItem[];
   selectedVesselId: string | null;
   onSelectedVesselIdChange: (vesselId: string | null) => void;
 };
@@ -77,9 +79,33 @@ function replaceVesselFeatures(layer: VectorLayer<VectorSource>, vessels: LiveVe
   );
 }
 
+function replaceVesselHistory(
+  layer: VectorLayer<VectorSource>,
+  vesselHistory: PointListItem[],
+) {
+  const source = layer.getSource();
+  if (!source) {
+    return;
+  }
+
+  source.clear();
+  if (vesselHistory.length < 2) {
+    return;
+  }
+
+  source.addFeature(
+    new Feature({
+      geometry: new LineString(
+        vesselHistory.map((point) => fromLonLat([point.lon, point.lat])),
+      ),
+    }),
+  );
+}
+
 export function useOpenLayersMap({
   points,
   vessels,
+  vesselHistory,
   selectedVesselId,
   onSelectedVesselIdChange,
 }: UseOpenLayersMapOptions) {
@@ -88,6 +114,7 @@ export function useOpenLayersMap({
   const mapTargetRef = useRef<HTMLDivElement | null>(null);
   const popupTargetRef = useRef<HTMLDivElement | null>(null);
   const pointLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const vesselHistoryLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const vesselLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const vesselPopupRef = useRef<Overlay | null>(null);
 
@@ -118,6 +145,13 @@ export function useOpenLayersMap({
         getVesselStyle(feature.get("course"), feature.get("freshness")),
     });
 
+    const vesselHistoryLayer = new VectorLayer({
+      source: new VectorSource(),
+      style: new Style({
+        stroke: new Stroke({ color: "#38bdf8", width: 3 }),
+      }),
+    });
+
     const tileLayer = new TileLayer({
       source: new ImageTile({
         attributions:
@@ -128,7 +162,7 @@ export function useOpenLayersMap({
 
     const map = new Map({
       target: mapTargetRef.current,
-      layers: [tileLayer, pointLayer, vesselLayer],
+      layers: [tileLayer, pointLayer, vesselHistoryLayer, vesselLayer],
       view: new View({
         center: fromLonLat([0, 20]),
         zoom: 2,
@@ -165,6 +199,7 @@ export function useOpenLayersMap({
     map.on("click", handleMapClick);
     map.on("pointermove", handlePointerMove);
     pointLayerRef.current = pointLayer;
+    vesselHistoryLayerRef.current = vesselHistoryLayer;
     vesselLayerRef.current = vesselLayer;
     vesselPopupRef.current = vesselPopup;
 
@@ -174,6 +209,7 @@ export function useOpenLayersMap({
       map.getTargetElement().style.cursor = "";
       map.setTarget(undefined);
       pointLayerRef.current = null;
+      vesselHistoryLayerRef.current = null;
       vesselLayerRef.current = null;
       vesselPopupRef.current = null;
     };
@@ -186,6 +222,13 @@ export function useOpenLayersMap({
       replacePointFeatures(pointLayerRef.current, points);
     }
   }, [points]);
+
+  // Replace the selected vessel's tail whenever a history request returns.
+  useEffect(() => {
+    if (vesselHistoryLayerRef.current) {
+      replaceVesselHistory(vesselHistoryLayerRef.current, vesselHistory ?? []);
+    }
+  }, [vesselHistory]);
 
   // Live vessel snapshots replace the previous features. A selection is also
   // cleared here if its vessel has disappeared from the latest snapshot.
