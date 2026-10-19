@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import os
+from pathlib import Path
 import time
 from typing import Any
 
@@ -178,7 +179,12 @@ async def run_probe() -> None:
     if not config.aisstream_api_key:
         raise RuntimeError("AISSTREAM_API_KEY is required")
 
-    duration_seconds = max(1, int(os.getenv("AIS_PROBE_DURATION_SECONDS", "60")))
+    configured_duration_seconds = int(os.getenv("AIS_PROBE_DURATION_SECONDS", "60"))
+    duration_seconds = (
+        None
+        if configured_duration_seconds == 0
+        else max(1, configured_duration_seconds)
+    )
     reconnect_backoff_seconds = max(
         0.0,
         float(os.getenv("AIS_PROBE_RECONNECT_BACKOFF_SECONDS", "5")),
@@ -200,10 +206,20 @@ async def run_probe() -> None:
 
     started_at = datetime.now(timezone.utc)
     started = time.monotonic()
-    deadline = started + duration_seconds
+    deadline = (
+        None
+        if duration_seconds is None
+        else started + duration_seconds
+    )
     next_checkpoint_at = started + checkpoint_seconds
     last_checkpoint_second = 0
     metrics = ProbeMetrics(started, duplicate_window_seconds)
+    output_path = os.getenv("AIS_PROBE_OUTPUT_PATH")
+    output_file = None
+    if output_path:
+        output_file_path = Path(output_path)
+        output_file_path.parent.mkdir(parents=True, exist_ok=True)
+        output_file = output_file_path.open("a", encoding="utf-8")
 
     connection_attempt_count = 0
     successful_connection_count = 0
@@ -252,14 +268,18 @@ async def run_probe() -> None:
             return
 
         elapsed_seconds = now - started
-        completed_second = min(int(elapsed_seconds), duration_seconds)
+        completed_second = (
+            int(elapsed_seconds)
+            if duration_seconds is None
+            else min(int(elapsed_seconds), duration_seconds)
+        )
         checkpoint = build_record(
             "checkpoint",
             elapsed_seconds,
             last_checkpoint_second,
             completed_second,
         )
-        print(json.dumps(checkpoint, separators=(",", ":")), flush=True)
+        _emit_record(checkpoint, output_file)
         last_checkpoint_second = completed_second
         while next_checkpoint_at <= now:
             next_checkpoint_at += checkpoint_seconds
@@ -267,7 +287,9 @@ async def run_probe() -> None:
     while not observation_complete:
         now = time.monotonic()
         emit_due_checkpoint(now)
-        remaining_seconds = deadline - now
+        remaining_seconds = (
+            float("inf") if deadline is None else deadline - now
+        )
         if remaining_seconds <= 0:
             break
 
@@ -304,7 +326,9 @@ async def run_probe() -> None:
                 while True:
                     now = time.monotonic()
                     emit_due_checkpoint(now)
-                    remaining_seconds = deadline - now
+                    remaining_seconds = (
+                        float("inf") if deadline is None else deadline - now
+                    )
                     if remaining_seconds <= 0:
                         observation_complete = True
                         break
@@ -317,7 +341,7 @@ async def run_probe() -> None:
                         async with asyncio.timeout(receive_timeout):
                             raw_message = await websocket.recv()
                     except TimeoutError:
-                        if time.monotonic() >= deadline:
+                        if deadline is not None and time.monotonic() >= deadline:
                             observation_complete = True
                             break
                         continue
@@ -342,20 +366,34 @@ async def run_probe() -> None:
 
         now = time.monotonic()
         emit_due_checkpoint(now)
-        remaining_seconds = deadline - now
+        remaining_seconds = (
+            float("inf") if deadline is None else deadline - now
+        )
         if remaining_seconds <= 0:
             break
         await asyncio.sleep(min(reconnect_backoff_seconds, remaining_seconds))
 
     elapsed_seconds = time.monotonic() - started
-    bucket_count = max(duration_seconds, max(metrics.per_second, default=-1) + 1)
-    final_record = build_record(
-        "final",
-        elapsed_seconds,
-        0,
-        bucket_count,
-    )
-    print(json.dumps(final_record, separators=(",", ":")), flush=True)
+    if duration_seconds is not None:
+        bucket_count = max(duration_seconds, max(metrics.per_second, default=-1) + 1)
+        final_record = build_record(
+            "final",
+            elapsed_seconds,
+            0,
+            bucket_count,
+        )
+        _emit_record(final_record, output_file)
+
+    if output_file is not None:
+        output_file.close()
+
+
+def _emit_record(record: dict[str, object], output_file: Any) -> None:
+    serialized = json.dumps(record, separators=(",", ":"))
+    print(serialized, flush=True)
+    if output_file is not None:
+        output_file.write(serialized + "\n")
+        output_file.flush()
 
 
 def _message_bytes(raw_message: str | bytes) -> bytes:

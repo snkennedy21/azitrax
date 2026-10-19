@@ -1,0 +1,22 @@
+name: ${COMPOSE_PROJECT_NAME:-azitrax-probe}
+
+services:
+  ais-probe:
+    restart: unless-stopped
+    environment:
+      AIS_PROBE_DURATION_SECONDS: "${AIS_PROBE_DURATION_SECONDS:-0}"
+      AIS_PROBE_CHECKPOINT_SECONDS: "${AIS_PROBE_CHECKPOINT_SECONDS:-60}"
+      AIS_PROBE_DUPLICATE_WINDOW_SECONDS: "${AIS_PROBE_DUPLICATE_WINDOW_SECONDS:-300}"
+      AIS_PROBE_RECONNECT_BACKOFF_SECONDS: "${AIS_PROBE_RECONNECT_BACKOFF_SECONDS:-5}"
+      AIS_PROBE_OUTPUT_PATH: /captures/${AIS_PROBE_OUTPUT_FILE:-ais-global-probe.ndjson}
+      AISSTREAM_API_KEY: ""
+      AISSTREAM_API_KEY_FILE: /run/secrets/aisstream_api_key
+      AISSTREAM_BOUNDING_BOXES: "${AIS_PROBE_BOUNDING_BOXES:-[[[-90,-180],[90,180]]]}"
+    secrets:
+      - aisstream_api_key
+    volumes:
+      - ./captures:/captures
+
+secrets:
+  aisstream_api_key:
+    file: ./secrets/aisstream_api_key
