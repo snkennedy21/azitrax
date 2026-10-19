@@ -6,11 +6,15 @@ from datetime import timezone
 import json
 import signal
 import ssl
+import sys
 from typing import Any
 
 from psycopg import Connection
+from psycopg import Error as PsycopgError
 from psycopg.rows import DictRow
 from psycopg_pool import ConnectionPool
+from psycopg_pool import PoolTimeout
+from redis.exceptions import RedisError
 
 from app.ais.source import AisSourceError
 from app.ais.source import DEFAULT_BOUNDING_BOXES
@@ -28,6 +32,10 @@ from app.cache.redis import serialize_cached_live_vessel
 from app.services.vessel_history import insert_vessel_history_record
 from app.schemas.vessels import AisVesselRecord
 from app.schemas.vessels import CachedLiveVessel
+
+
+class ConsumerDatabaseError(RuntimeError):
+    """A database failure while processing a provider message."""
 
 
 async def run_consumer(
@@ -49,11 +57,21 @@ async def run_consumer(
     redis_client = redis_client or create_redis_client()
     owns_db_pool = db_pool is None
     db_pool = db_pool or create_pool()
-    if owns_db_pool:
-        db_pool.open()
 
     exit_code = 0
     try:
+        if owns_db_pool:
+            try:
+                db_pool.open()
+            except (PsycopgError, PoolTimeout, OSError) as exc:
+                write_source_status(
+                    redis_client,
+                    status="database_unavailable",
+                    ais_config=ais_config,
+                    error_message=str(exc),
+                )
+                return 1
+
         if ais_config.source == "aisstream":
             return await _consume_aisstream(
                 redis_client=redis_client,
@@ -140,30 +158,61 @@ async def _consume_aisstream(
                         )
                         continue
 
-                    write_source_status(
-                        redis_client,
-                        status="connected",
-                        ais_config=ais_config,
-                        last_successful_message_at=datetime.now(timezone.utc),
-                    )
                     if db_pool is None:
                         raise RuntimeError("database pool is required for AISStream consumption")
 
-                    with db_pool.connection() as db:
-                        written_count = process_aisstream_message(
-                            redis_client,
-                            source_message,
-                            db=db,
-                        )
+                    try:
+                        with db_pool.connection() as db:
+                            written_count = process_aisstream_message(
+                                redis_client,
+                                source_message,
+                                db=db,
+                            )
+                    except (PsycopgError, PoolTimeout) as exc:
+                        raise ConsumerDatabaseError(str(exc)) from exc
+
                     if written_count:
                         write_source_status(
                             redis_client,
                             status="connected",
                             ais_config=ais_config,
+                            last_successful_message_at=datetime.now(timezone.utc),
                             last_renderable_message_at=datetime.now(timezone.utc),
                         )
                     if consumer_config.run_once and written_count:
                         return 0
+        except ConsumerDatabaseError as exc:
+            if stop_event.is_set():
+                break
+
+            write_source_status(
+                redis_client,
+                status="database_unavailable",
+                ais_config=ais_config,
+                error_message=str(exc),
+            )
+            try:
+                await asyncio.wait_for(
+                    stop_event.wait(),
+                    timeout=consumer_config.reconnect_backoff_seconds,
+                )
+            except TimeoutError:
+                continue
+        except RedisError as exc:
+            if stop_event.is_set():
+                break
+
+            # Redis is a sink dependency, not an AIS transport failure.
+            # Status cannot be written when Redis is unavailable, so the
+            # health probe will fail its ping check.
+            print(f"Redis sink unavailable: {exc}")
+            try:
+                await asyncio.wait_for(
+                    stop_event.wait(),
+                    timeout=consumer_config.reconnect_backoff_seconds,
+                )
+            except TimeoutError:
+                continue
         except Exception as exc:
             if stop_event.is_set():
                 break
@@ -216,7 +265,6 @@ def process_aisstream_message(
     observed_at: datetime | None = None,
 ) -> int:
     record = normalize_aisstream_message(message)
-    print('record: ', record)
     if record is None:
         return 0
 
@@ -241,6 +289,11 @@ def write_source_status(
         "source": ais_config.source,
         "status": status,
         "updatedAt": observed_at.isoformat(),
+        "consumerStartedAt": (
+            observed_at.isoformat()
+            if status == "connecting"
+            else previous_status.get("consumerStartedAt")
+        ),
         "lastSuccessfulMessageAt": _preserved_timestamp(
             previous_status,
             "lastSuccessfulMessageAt",
@@ -277,6 +330,37 @@ def read_source_status(redis_client: Any) -> dict[str, Any]:
         return {}
 
     return decoded if isinstance(decoded, dict) else {}
+
+
+def consumer_health_check(redis_client: Any, max_age_seconds: float) -> None:
+    """Raise when dependencies or recent post-persistence progress are absent."""
+    redis_client.ping()
+    status = read_source_status(redis_client)
+    if status.get("status") != "connected":
+        raise RuntimeError(f"consumer status is {status.get('status', 'missing')}")
+
+    last_renderable = status.get("lastRenderableMessageAt")
+    if not isinstance(last_renderable, str):
+        raise RuntimeError("consumer has not persisted a renderable message")
+
+    try:
+        processed_at = datetime.fromisoformat(last_renderable)
+        started_at_value = status.get("consumerStartedAt")
+        started_at = (
+            datetime.fromisoformat(started_at_value)
+            if isinstance(started_at_value, str)
+            else None
+        )
+    except ValueError as exc:
+        raise RuntimeError("consumer progress timestamp is invalid") from exc
+
+    processed_at = processed_at.astimezone(timezone.utc)
+    if started_at is not None and processed_at < started_at.astimezone(timezone.utc):
+        raise RuntimeError("consumer has not progressed since it started")
+
+    age = (datetime.now(timezone.utc) - processed_at).total_seconds()
+    if age > max_age_seconds:
+        raise RuntimeError(f"consumer progress is {age:.0f}s old")
 
 
 def build_cached_live_vessel(
@@ -405,6 +489,19 @@ def _optional_int(value: Any) -> int | None:
 
 
 def main() -> int:
+    if len(sys.argv) == 2 and sys.argv[1] == "--health":
+        try:
+            config = AisConsumerConfig.from_env()
+            client = create_redis_client()
+            try:
+                consumer_health_check(client, config.health_max_age_seconds)
+            finally:
+                client.close()
+        except (RedisError, RuntimeError, ValueError) as exc:
+            print(f"Consumer health check failed: {exc}")
+            return 1
+        return 0
+
     async def _main() -> int:
 
         ## Clean Shutdown writes (Ctrl+C/Docker stop signals)

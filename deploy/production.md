@@ -189,7 +189,7 @@ docker compose ps
 Expected high-level output:
 
 - `nginx`, `backend`, `ais-consumer`, `db`, `redis`, and `cloudflared` exist.
-- `backend`, `db`, and `redis` are healthy after startup.
+- `backend`, `ais-consumer`, `db`, and `redis` are healthy after startup.
 - No Azitrax application service publishes a local host port.
 - Public traffic reaches the app only through Cloudflare Tunnel.
 
@@ -208,6 +208,22 @@ docker compose logs -f nginx
 docker compose logs -f backend
 docker compose logs -f ais-consumer
 ```
+
+The consumer health check verifies Redis connectivity and requires a recent
+position whose Postgres history write and Redis live projection both completed.
+Inspect it directly with:
+
+```sh
+cd /srv/azitrax
+consumer_id=$(docker compose ps -q ais-consumer)
+docker inspect --format '{{.State.Health.Status}}' "$consumer_id"
+docker inspect --format '{{range .State.Health.Log}}{{println .Output}}{{end}}' "$consumer_id" | tail -5
+docker compose exec -T ais-consumer python -m app.ais.consumer --health
+```
+
+`database_unavailable` in the Redis source-status record, or a failed consumer
+health check, indicates that ingestion is not reaching both sinks. It is not an
+AISStream transport failure.
 
 Restart one service:
 

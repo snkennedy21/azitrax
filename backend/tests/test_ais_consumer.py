@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.ais.consumer import process_aisstream_message
+from app.ais.consumer import consumer_health_check
 from app.ais.consumer import run_consumer
 from app.ais.consumer import upsert_live_vessel_records
 from app.ais.consumer import write_source_status
@@ -35,6 +36,9 @@ class FakeRedisClient:
 
     def sadd(self, key: str, value: object) -> None:
         self.sets.setdefault(key, set()).add(str(value))
+
+    def ping(self) -> bool:
+        return True
 
 
 def test_first_live_vessel_write_updates_record_and_known_set() -> None:
@@ -164,11 +168,63 @@ def test_source_status_preserves_success_and_error_timing() -> None:
         "source": "aisstream",
         "status": "reconnecting",
         "updatedAt": "2026-05-13T16:03:00+00:00",
+        "consumerStartedAt": None,
         "lastSuccessfulMessageAt": "2026-05-13T16:01:00+00:00",
         "lastRenderableMessageAt": "2026-05-13T16:01:30+00:00",
         "lastErrorAt": "2026-05-13T16:03:00+00:00",
         "lastError": "connection closed",
     }
+
+
+def test_consumer_health_requires_recent_persisted_progress() -> None:
+    redis_client = FakeRedisClient()
+    ais_config = AisSourceConfig(source="aisstream")
+    now = datetime.now(timezone.utc)
+    write_source_status(
+        redis_client,
+        status="connected",
+        ais_config=ais_config,
+        last_successful_message_at=now,
+        last_renderable_message_at=now,
+    )
+
+    consumer_health_check(redis_client, max_age_seconds=5)
+
+    write_source_status(
+        redis_client,
+        status="database_unavailable",
+        ais_config=ais_config,
+        error_message="password authentication failed",
+    )
+    with pytest.raises(RuntimeError, match="database_unavailable"):
+        consumer_health_check(redis_client, max_age_seconds=5)
+
+
+def test_production_message_reaches_history_and_live_projection(db_connection) -> None:
+    redis_client = FakeRedisClient()
+    message = {
+        "MessageType": "PositionReport",
+        "MetaData": {
+            "MMSI": 123456789,
+            "ShipName": "TEST VESSEL",
+            "latitude": 40.1,
+            "longitude": -73.9,
+            "time_utc": "2026-05-13 16:01:00.000000 +0000 UTC",
+        },
+        "Message": {"PositionReport": {"Sog": 4.2}},
+    }
+
+    assert process_aisstream_message(redis_client, message, db_connection) == 1
+    history = db_connection.execute(
+        "SELECT mmsi, ST_Y(position) AS lat, ST_X(position) AS lon "
+        "FROM vessel_history WHERE mmsi = %s ORDER BY id DESC LIMIT 1",
+        (123456789,),
+    ).fetchone()
+    assert history is not None
+    assert history["mmsi"] == 123456789
+    assert history["lat"] == pytest.approx(40.1)
+    assert history["lon"] == pytest.approx(-73.9)
+    assert live_vessel_key(123456789) in redis_client.values
 
 
 @pytest.mark.asyncio

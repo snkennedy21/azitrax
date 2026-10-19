@@ -64,16 +64,24 @@ services:
     image: "${AZITRAX_BACKEND_IMAGE}:${AZITRAX_IMAGE_TAG}"
     command: python -m app.ais.consumer
     environment:
-      <<: *ais-environment
+      <<: [*ais-environment, *backend-environment]
       AIS_CONSUMER_POLL_SECONDS: "${AIS_CONSUMER_POLL_SECONDS}"
       AIS_CONSUMER_RUN_ONCE: "false"
       AIS_CONSUMER_RECONNECT_BACKOFF_SECONDS: "${AIS_CONSUMER_RECONNECT_BACKOFF_SECONDS}"
-      REDIS_URL: "${REDIS_URL}"
     secrets:
       - aisstream_api_key
+      - postgres_password
     depends_on:
+      db:
+        condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.ais.consumer", "--health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
 
   db:
     image: postgis/postgis:16-3.4

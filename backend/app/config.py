@@ -93,6 +93,7 @@ class AisConsumerConfig:
     poll_seconds: float = 60.0
     run_once: bool = False
     reconnect_backoff_seconds: float = 5.0
+    health_max_age_seconds: float = 300.0
 
     @classmethod
     def from_env(cls) -> AisConsumerConfig:
@@ -102,6 +103,10 @@ class AisConsumerConfig:
             reconnect_backoff_seconds=max(
                 0.1,
                 float(os.getenv("AIS_CONSUMER_RECONNECT_BACKOFF_SECONDS", "5")),
+            ),
+            health_max_age_seconds=max(
+                1.0,
+                float(os.getenv("AIS_CONSUMER_HEALTH_MAX_AGE_SECONDS", "300")),
             ),
         )
 
