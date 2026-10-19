@@ -4,4 +4,5 @@ __pycache__/
 *.py[cod]
 Epics/
 captures/*.ndjson
+captures/raw/*.ndjson
 secrets/aisstream_api_key

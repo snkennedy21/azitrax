@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from app.ais.global_probe import ProbeMetrics
+from app.ais.global_probe import ProbeMetrics, RawCaptureWriter
 
 
 def position_report(
@@ -98,3 +98,15 @@ def test_records_longest_gap_between_ais_messages() -> None:
     assert snapshot["max_inter_message_gap_seconds"] == pytest.approx(1.75)
     assert snapshot["max_gap_started_at_second"] == pytest.approx(1.25)
     assert snapshot["max_gap_ended_at_second"] == pytest.approx(3.0)
+
+
+def test_raw_capture_writer_writes_received_frames_to_daily_ndjson(tmp_path) -> None:
+    writer = RawCaptureWriter(str(tmp_path / "raw" / "ais-global-raw"))
+
+    writer.write(b'{"MessageType":"PositionReport"}')
+    writer.flush()
+    writer.close()
+
+    files = list((tmp_path / "raw").glob("ais-global-raw-*.ndjson"))
+    assert len(files) == 1
+    assert files[0].read_bytes() == b'{"MessageType":"PositionReport"}\n'

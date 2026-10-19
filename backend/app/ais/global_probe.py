@@ -174,6 +174,39 @@ class ProbeMetrics:
         }
 
 
+class RawCaptureWriter:
+    """Write received provider frames to daily newline-delimited files."""
+
+    def __init__(self, path_prefix: str) -> None:
+        self.path_prefix = Path(path_prefix)
+        self.path_prefix.parent.mkdir(parents=True, exist_ok=True)
+        self._date: str | None = None
+        self._file: Any = None
+
+    def write(self, raw_message: str | bytes) -> None:
+        current_date = datetime.now(timezone.utc).date().isoformat()
+        if current_date != self._date:
+            self.close()
+            self._date = current_date
+            path = self.path_prefix.parent / (
+                f"{self.path_prefix.name}-{current_date}.ndjson"
+            )
+            self._file = path.open("ab", buffering=1024 * 1024)
+
+        self._file.write(_message_bytes(raw_message))
+        self._file.write(b"\n")
+
+    def flush(self) -> None:
+        if self._file is not None:
+            self._file.flush()
+
+    def close(self) -> None:
+        if self._file is not None:
+            self._file.flush()
+            self._file.close()
+            self._file = None
+
+
 async def run_probe() -> None:
     config = AisSourceConfig.from_env()
     if not config.aisstream_api_key:
@@ -220,6 +253,8 @@ async def run_probe() -> None:
         output_file_path = Path(output_path)
         output_file_path.parent.mkdir(parents=True, exist_ok=True)
         output_file = output_file_path.open("a", encoding="utf-8")
+    raw_capture_path = os.getenv("AIS_PROBE_RAW_OUTPUT_PATH")
+    raw_capture = RawCaptureWriter(raw_capture_path) if raw_capture_path else None
 
     connection_attempt_count = 0
     successful_connection_count = 0
@@ -280,6 +315,8 @@ async def run_probe() -> None:
             completed_second,
         )
         _emit_record(checkpoint, output_file)
+        if raw_capture is not None:
+            raw_capture.flush()
         last_checkpoint_second = completed_second
         while next_checkpoint_at <= now:
             next_checkpoint_at += checkpoint_seconds
@@ -347,6 +384,8 @@ async def run_probe() -> None:
                         continue
 
                     received_at = time.monotonic()
+                    if raw_capture is not None:
+                        raw_capture.write(raw_message)
                     metrics.record_frame(raw_message, received_at)
         except Exception as exc:
             event = {
@@ -386,6 +425,8 @@ async def run_probe() -> None:
 
     if output_file is not None:
         output_file.close()
+    if raw_capture is not None:
+        raw_capture.close()
 
 
 def _emit_record(record: dict[str, object], output_file: Any) -> None:

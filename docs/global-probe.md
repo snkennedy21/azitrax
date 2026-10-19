@@ -32,6 +32,16 @@ every minute by default to:
 captures/ais-global-probe.ndjson
 ```
 
+Each received provider frame is also written to a daily raw capture file:
+
+```text
+captures/raw/ais-global-raw-YYYY-MM-DD.ndjson
+```
+
+The raw capture contains the full decoded AISStream JSON payload, one message
+per line. It is separate from the metrics file and is expected to grow by
+roughly 3.8 GB per day at the currently observed source rate.
+
 The file is append-only, so choose a new `AIS_PROBE_OUTPUT_FILE` for each
 observation run. For example:
 
@@ -64,4 +74,5 @@ docker compose -f compose.probe.yaml up -d --build ais-probe
 
 The host must have Docker Compose, network access to AISStream, and enough
 disk for the capture. The current measured rate is approximately 3.8 GB/day of
-decoded JSON payload before filesystem overhead.
+decoded JSON payload before filesystem overhead. Change the raw filename prefix
+with `AIS_PROBE_RAW_OUTPUT_PREFIX` if needed.
