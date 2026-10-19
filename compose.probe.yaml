@@ -2,8 +2,14 @@ name: ${COMPOSE_PROJECT_NAME:-azitrax-probe}
 
 services:
   ais-probe:
-    restart: unless-stopped
+    build:
+      context: ./backend
+    command: python -m app.ais.global_probe
     environment:
+      AIS_SOURCE: aisstream
+      AIS_ALLOW_FIXTURE_FALLBACK: "false"
+      AIS_FIXTURE_PATH: /app/app/ais/fixtures/aisstream-position-reports-sample.json
+      AISSTREAM_WS_URL: "${AISSTREAM_WS_URL:-wss://stream.aisstream.io/v0/stream}"
       AIS_PROBE_DURATION_SECONDS: "${AIS_PROBE_DURATION_SECONDS:-0}"
       AIS_PROBE_CHECKPOINT_SECONDS: "${AIS_PROBE_CHECKPOINT_SECONDS:-60}"
       AIS_PROBE_DUPLICATE_WINDOW_SECONDS: "${AIS_PROBE_DUPLICATE_WINDOW_SECONDS:-300}"
@@ -12,10 +18,16 @@ services:
       AISSTREAM_API_KEY: ""
       AISSTREAM_API_KEY_FILE: /run/secrets/aisstream_api_key
       AISSTREAM_BOUNDING_BOXES: "${AIS_PROBE_BOUNDING_BOXES:-[[[-90,-180],[90,180]]]}"
+      AISSTREAM_MESSAGE_TYPES: "${AISSTREAM_MESSAGE_TYPES:-PositionReport}"
+      AISSTREAM_CONNECT_TIMEOUT_SECONDS: "${AISSTREAM_CONNECT_TIMEOUT_SECONDS:-30}"
+      AISSTREAM_SAMPLE_MESSAGE_LIMIT: "${AISSTREAM_SAMPLE_MESSAGE_LIMIT:-50}"
+      AISSTREAM_DISABLE_TLS_VERIFY: "${AISSTREAM_DISABLE_TLS_VERIFY:-false}"
     secrets:
       - aisstream_api_key
     volumes:
       - ./captures:/captures
+      - ./backend:/app
+    restart: unless-stopped
 
 secrets:
   aisstream_api_key:

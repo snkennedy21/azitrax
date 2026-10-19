@@ -21,9 +21,7 @@ repository or passed through the Compose environment.
 
 ```sh
 docker compose \
-  -f compose.yaml \
   -f compose.probe.yaml \
-  --profile probe \
   up -d --build ais-probe
 ```
 
@@ -39,15 +37,15 @@ observation run. For example:
 
 ```sh
 AIS_PROBE_OUTPUT_FILE=ais-global-2026-10-19.ndjson \
-docker compose -f compose.yaml -f compose.probe.yaml --profile probe up -d --build ais-probe
+docker compose -f compose.probe.yaml up -d --build ais-probe
 ```
 
 ## Monitor and stop
 
 ```sh
-docker compose -f compose.yaml -f compose.probe.yaml --profile probe logs -f ais-probe
-docker compose -f compose.yaml -f compose.probe.yaml --profile probe ps ais-probe
-docker compose -f compose.yaml -f compose.probe.yaml --profile probe stop ais-probe
+docker compose -f compose.probe.yaml logs -f ais-probe
+docker compose -f compose.probe.yaml ps ais-probe
+docker compose -f compose.probe.yaml stop ais-probe
 ```
 
 Stopping the container preserves all completed checkpoint records. The probe
@@ -61,7 +59,7 @@ messages. Override values for a run with environment variables, for example:
 ```sh
 AIS_PROBE_CHECKPOINT_SECONDS=300 \
 AIS_PROBE_OUTPUT_FILE=ais-global-7d.ndjson \
-docker compose -f compose.yaml -f compose.probe.yaml --profile probe up -d --build ais-probe
+docker compose -f compose.probe.yaml up -d --build ais-probe
 ```
 
 The host must have Docker Compose, network access to AISStream, and enough
