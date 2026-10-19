@@ -9,6 +9,8 @@ import styles from "./styles.module.scss";
 export function MapView() {
   const [selectedVesselId, setSelectedVesselId] = useState<string | null>(null);
   const [historyIsVisible, setHistoryIsVisible] = useState(false);
+
+  // Get the we need for the map
   const {
     points,
     vessels,
