@@ -5,7 +5,7 @@ import pytest
 from psycopg import Connection
 
 from app.schemas.vessels import AisVesselRecord
-from app.services.vessel_history import insert_vessel_history_record
+from app.repositories.vessel_history import insert_vessel_history_record
 
 
 def test_insert_vessel_history_record_persists_position_observation(

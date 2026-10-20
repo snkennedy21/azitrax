@@ -24,13 +24,7 @@ def insert_vessel_history_record(
         )
         VALUES (%s, %s, %s, ST_SetSRID(ST_MakePoint(%s, %s), 4326))
         """,
-        (
-            record.mmsi,
-            observed_at,
-            received_at,
-            record.lon,
-            record.lat,
-        ),
+        (record.mmsi, observed_at, received_at, record.lon, record.lat),
     )
 
 

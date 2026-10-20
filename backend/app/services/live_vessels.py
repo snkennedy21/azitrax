@@ -6,8 +6,8 @@ from typing import Any
 from pydantic import ValidationError
 
 from app.ais.source import DEFAULT_BOUNDING_BOXES
-from app.ais.consumer import read_source_status
 from app.cache.redis import deserialize_cached_live_vessel
+from app.projections.source_status import read_source_status
 from app.cache.redis import LIVE_VESSEL_STALE_AFTER_SECONDS
 from app.cache.redis import LIVE_VESSELS_INDEX_KEY
 from app.cache.redis import live_vessel_key

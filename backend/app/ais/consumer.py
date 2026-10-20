@@ -23,15 +23,11 @@ from app.config import AisConsumerConfig
 from app.config import AisSourceConfig
 from app.db.connection import create_pool
 from app.cache.redis import create_redis_client
-from app.cache.redis import deserialize_cached_live_vessel
-from app.cache.redis import LIVE_AIS_STATUS_KEY
-from app.cache.redis import LIVE_VESSEL_EXPIRE_AFTER_SECONDS
-from app.cache.redis import LIVE_VESSELS_INDEX_KEY
-from app.cache.redis import live_vessel_key
-from app.cache.redis import serialize_cached_live_vessel
-from app.services.vessel_history import insert_vessel_history_record
+from app.projections.live_vessels import upsert_live_vessel_records
+from app.projections.source_status import consumer_health_check
+from app.projections.source_status import write_source_status
+from app.repositories.vessel_history import insert_vessel_history_record
 from app.schemas.vessels import AisVesselRecord
-from app.schemas.vessels import CachedLiveVessel
 
 
 class ConsumerDatabaseError(RuntimeError):
@@ -234,30 +230,6 @@ async def _consume_aisstream(
     return 0
 
 
-def upsert_live_vessel_records(
-    redis_client: Any,
-    records: list[AisVesselRecord],
-    observed_at: datetime | None = None,
-) -> int:
-    written_count = 0
-    observed_at = observed_at or datetime.now(timezone.utc)
-
-    for record in records:
-        vessel = build_cached_live_vessel(redis_client, record, observed_at)
-        if vessel is None:
-            continue
-
-        redis_client.set(
-            live_vessel_key(vessel.mmsi),
-            serialize_cached_live_vessel(vessel),
-            ex=LIVE_VESSEL_EXPIRE_AFTER_SECONDS,
-        )
-        redis_client.sadd(LIVE_VESSELS_INDEX_KEY, vessel.mmsi)
-        written_count += 1
-
-    return written_count
-
-
 def process_aisstream_message(
     redis_client: Any,
     message: Any,
@@ -271,134 +243,6 @@ def process_aisstream_message(
     insert_vessel_history_record(db, record)
 
     return upsert_live_vessel_records(redis_client, [record], observed_at=observed_at)
-
-
-def write_source_status(
-    redis_client: Any,
-    status: str,
-    ais_config: AisSourceConfig,
-    error_message: str | None = None,
-    last_successful_message_at: datetime | None = None,
-    last_renderable_message_at: datetime | None = None,
-    observed_at: datetime | None = None,
-) -> None:
-    observed_at = observed_at or datetime.now(timezone.utc)
-    previous_status = read_source_status(redis_client)
-
-    payload = {
-        "source": ais_config.source,
-        "status": status,
-        "updatedAt": observed_at.isoformat(),
-        "consumerStartedAt": (
-            observed_at.isoformat()
-            if status == "connecting"
-            else previous_status.get("consumerStartedAt")
-        ),
-        "lastSuccessfulMessageAt": _preserved_timestamp(
-            previous_status,
-            "lastSuccessfulMessageAt",
-            last_successful_message_at,
-        ),
-        "lastRenderableMessageAt": _preserved_timestamp(
-            previous_status,
-            "lastRenderableMessageAt",
-            last_renderable_message_at,
-        ),
-        "lastErrorAt": previous_status.get("lastErrorAt"),
-        "lastError": previous_status.get("lastError"),
-    }
-
-    if error_message:
-        payload["lastErrorAt"] = observed_at.isoformat()
-        payload["lastError"] = error_message
-
-    redis_client.set(LIVE_AIS_STATUS_KEY, json.dumps(payload))
-
-
-def read_source_status(redis_client: Any) -> dict[str, Any]:
-    try:
-        payload = redis_client.get(LIVE_AIS_STATUS_KEY)
-    except AttributeError:
-        return {}
-
-    if not payload:
-        return {}
-
-    try:
-        decoded = json.loads(payload)
-    except (TypeError, json.JSONDecodeError):
-        return {}
-
-    return decoded if isinstance(decoded, dict) else {}
-
-
-def consumer_health_check(redis_client: Any, max_age_seconds: float) -> None:
-    """Raise when dependencies or recent post-persistence progress are absent."""
-    redis_client.ping()
-    status = read_source_status(redis_client)
-    if status.get("status") != "connected":
-        raise RuntimeError(f"consumer status is {status.get('status', 'missing')}")
-
-    last_renderable = status.get("lastRenderableMessageAt")
-    if not isinstance(last_renderable, str):
-        raise RuntimeError("consumer has not persisted a renderable message")
-
-    try:
-        processed_at = datetime.fromisoformat(last_renderable)
-        started_at_value = status.get("consumerStartedAt")
-        started_at = (
-            datetime.fromisoformat(started_at_value)
-            if isinstance(started_at_value, str)
-            else None
-        )
-    except ValueError as exc:
-        raise RuntimeError("consumer progress timestamp is invalid") from exc
-
-    processed_at = processed_at.astimezone(timezone.utc)
-    if started_at is not None and processed_at < started_at.astimezone(timezone.utc):
-        raise RuntimeError("consumer has not progressed since it started")
-
-    age = (datetime.now(timezone.utc) - processed_at).total_seconds()
-    if age > max_age_seconds:
-        raise RuntimeError(f"consumer progress is {age:.0f}s old")
-
-
-def build_cached_live_vessel(
-    redis_client: Any,
-    record: AisVesselRecord,
-    observed_at: datetime,
-) -> CachedLiveVessel | None:
-    try:
-        existing_payload = redis_client.get(live_vessel_key(record.mmsi))
-    except AttributeError:
-        existing_payload = None
-
-    observed_at_value = observed_at.isoformat()
-    first_seen_at = observed_at_value
-    if existing_payload:
-        try:
-            first_seen_at = deserialize_cached_live_vessel(existing_payload).first_seen_at
-        except ValueError:
-            first_seen_at = observed_at_value
-
-    try:
-        return CachedLiveVessel(
-            id=f"mmsi:{record.mmsi}",
-            mmsi=record.mmsi,
-            lat=record.lat,
-            lon=record.lon,
-            timestamp=record.time_utc,
-            label=record.ship_name,
-            course=record.cog,
-            heading=record.true_heading,
-            speed=record.sog,
-            destination=None,
-            first_seen_at=first_seen_at,
-            last_seen_at=observed_at_value,
-            last_message_at=_normalize_source_timestamp(record.time_utc, observed_at_value),
-        )
-    except ValueError:
-        return None
 
 
 def normalize_aisstream_message(message: Any) -> AisVesselRecord | None:
